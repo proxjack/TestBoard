@@ -1,150 +1,150 @@
 # Arduino PC Controller
 
-Progetto minimale per controllare un Arduino Uno/Nano dal PC tramite porta seriale.  
-Un'interfaccia grafica Python (CustomTkinter) permette di regolare la luminosità di un LED via PWM e di inviare un impulso digitale, il tutto senza dover toccare codice né Serial Monitor.
+A minimal project to control an Arduino Uno/Nano from a PC over serial.  
+A Python GUI (CustomTkinter) lets you adjust LED brightness via PWM and send a digital pulse — no Serial Monitor or code changes needed.
 
 ---
 
-## Hardware richiesto
+## Hardware Required
 
-| Componente | Note |
+| Component | Notes |
 |---|---|
-| Arduino Uno o Nano | Testato su Uno R3 |
-| LED + resistenza da 220 Ω | Collegati sul pin 11 (PWM hardware) |
-| Cavo USB | Sia per alimentazione che per seriale |
+| Arduino Uno or Nano | Tested on Uno R3 |
+| LED + 220 Ω resistor | Connected to pin 11 (hardware PWM) |
+| USB cable | Data cable — used for both power and serial |
 
-> **Pin 13** è il LED onboard di Arduino: non serve componente esterno per l'impulso.  
-> **Pin 11** è usato per il PWM del LED esterno perché il pin A0 (fisicamente pin 14) non supporta PWM hardware su Arduino Uno.
+> **Pin 13** is the Arduino onboard LED — no external component needed for the pulse.  
+> **Pin 11** is used for PWM because pin A0 (physical pin 14) does not support hardware PWM on Arduino Uno.
 
 ---
 
-## Schema collegamenti
+## Wiring
 
 ```
 Arduino Uno          Breadboard
 ───────────          ──────────
-Pin 11  ──────────►  Anodo LED (+)
-GND     ──────────►  Catodo LED (–) via resistenza 220 Ω
+Pin 11  ──────────►  LED anode (+)
+GND     ──────────►  LED cathode (–) via 220 Ω resistor
 
-Pin 13  (LED onboard, nessun collegamento esterno richiesto)
+Pin 13  (onboard LED — no external wiring required)
 ```
 
-| Pin Arduino | Direzione | Componente |
+| Arduino Pin | Direction | Component |
 |---|---|---|
-| 11 | OUTPUT PWM | LED esterno (anodo via 220 Ω) |
-| 13 | OUTPUT digitale | LED onboard (impulso 500 ms) |
-| GND | — | Catodo LED / riferimento comune |
+| 11 | OUTPUT PWM | External LED (anode via 220 Ω) |
+| 13 | OUTPUT digital | Onboard LED (500 ms pulse) |
+| GND | — | LED cathode / common ground |
 
 ---
 
-## Installazione
+## Installation
 
 ### 1. Firmware — Arduino IDE
 
-1. Apri **Arduino IDE** (versione 1.x o 2.x).
-2. Vai su **File → Apri** e seleziona `firmware.ino`.
-3. Seleziona la board: **Strumenti → Scheda → Arduino Uno** (o Nano).
-4. Seleziona la porta: **Strumenti → Porta → COMx** (Windows) o `/dev/ttyUSBx` (Linux/Mac).
-5. Clicca su **Carica** (freccia →).
-6. Apri il **Serial Monitor** a 9600 baud e verifica che all'avvio compaia `READY`.
+1. Open **Arduino IDE** (1.x or 2.x).
+2. Go to **File → Open** and select `firmware.ino`.
+3. Select the board: **Tools → Board → Arduino Uno** (or Nano).
+4. Select the port: **Tools → Port → COMx** (Windows) or `/dev/ttyUSBx` (Linux/Mac).
+5. Click **Upload** (→ arrow).
+6. Open the **Serial Monitor** at 9600 baud and confirm `READY` appears on boot.
 
-### 2. Software Python
+### 2. Python Software
 
-Requisiti: Python 3.10 o superiore.
+Requires Python 3.10 or later.
 
 ```bash
-# Clona la repo (oppure scarica lo ZIP)
+# Clone the repo (or download the ZIP)
 git clone https://github.com/proxjack/test-board.git
 cd test-board
 
-# (Opzionale ma consigliato) ambiente virtuale
+# (Optional but recommended) virtual environment
 python -m venv .venv
 # Windows:
 .venv\Scripts\activate
 # Linux/Mac:
 source .venv/bin/activate
 
-# Installa le dipendenze
+# Install dependencies
 pip install -r requirements.txt
 
-# Avvia il controller
+# Launch the controller
 python controller.py
 ```
 
 ---
 
-## Utilizzo
+## Usage
 
-1. Collega Arduino al PC tramite USB.
-2. Avvia `python controller.py`.
-3. Nel selettore **Porta** scegli la porta seriale di Arduino (es. `COM3` su Windows, `/dev/ttyUSB0` su Linux).
-4. Clicca **Connetti** — l'applicazione aspetta 2 secondi per il reset automatico di Arduino, poi mostra `● Connesso`.
-5. Trascina lo **slider** (0–255) per regolare la luminosità del LED sul pin 11.
-6. Clicca **Impulso 500 ms** per portare il pin 13 HIGH per mezzo secondo (LED onboard lampeggia).
-7. Tutti i messaggi TX/RX sono visibili nella console log in basso con timestamp.
-8. Clicca **Disconnetti** (o chiudi la finestra) per rilasciare la porta seriale.
+1. Plug Arduino into the PC via USB.
+2. Run `python controller.py`.
+3. Select the serial port from the **Port** dropdown (e.g. `COM3` on Windows, `/dev/ttyUSB0` on Linux).
+4. Click **Connect** — the app waits 2 seconds for the Arduino auto-reset, then shows `● Connected`.
+5. Drag the **slider** (0–255) to adjust LED brightness on pin 11.
+6. Click **500 ms Pulse** to drive pin 13 HIGH for half a second (onboard LED blinks).
+7. All TX/RX messages appear in the log console at the bottom with timestamps.
+8. Click **Disconnect** (or close the window) to release the serial port cleanly.
 
 ---
 
-## Protocollo seriale
+## Serial Protocol
 
-**Impostazioni:** 9600 baud, 8N1, terminatore `\n`
+**Settings:** 9600 baud, 8N1, newline `\n` terminator
 
-### Comandi (PC → Arduino)
+### Commands (PC → Arduino)
 
-| Comando | Descrizione | Esempio |
+| Command | Description | Example |
 |---|---|---|
-| `PWM:<valore>` | Imposta luminosità LED (0–255). Il valore viene clamped automaticamente. | `PWM:128` |
-| `PULSE` | Porta pin 13 HIGH per 500 ms, poi LOW. Non bloccante. | `PULSE` |
-| `PING` | Verifica connessione | `PING` |
+| `PWM:<value>` | Set LED brightness (0–255). Value is clamped automatically. | `PWM:128` |
+| `PULSE` | Drive pin 13 HIGH for 500 ms, then LOW. Non-blocking. | `PULSE` |
+| `PING` | Check connection | `PING` |
 
-### Risposte (Arduino → PC)
+### Responses (Arduino → PC)
 
-| Risposta | Quando viene inviata |
+| Response | When sent |
 |---|---|
-| `READY` | All'avvio del firmware |
-| `PONG` | In risposta a `PING` |
-| `OK:PWM:<n>` | Conferma impostazione PWM (con valore effettivamente applicato) |
-| `OK:PULSE` | Conferma avvio impulso |
-| `ERR:UNKNOWN:<cmd>` | Comando non riconosciuto |
+| `READY` | On firmware boot |
+| `PONG` | In reply to `PING` |
+| `OK:PWM:<n>` | Confirms PWM value applied |
+| `OK:PULSE` | Confirms pulse started |
+| `ERR:UNKNOWN:<cmd>` | Unrecognised command |
 
 ---
 
-## Struttura del progetto
+## Project Structure
 
 ```
 test-board/
-├── firmware.ino       # Firmware Arduino (loop non bloccante con millis())
-├── controller.py      # GUI Python — CustomTkinter + pyserial
-├── requirements.txt   # Dipendenze Python
-├── .gitignore         # Esclusioni standard Python
-└── README.md          # Questa documentazione
+├── firmware.ino       # Arduino sketch — non-blocking loop with millis()
+├── controller.py      # Python GUI — CustomTkinter + pyserial, RX thread
+├── requirements.txt   # Python dependencies
+├── .gitignore         # Standard Python ignores
+└── README.md          # This file
 ```
 
 ---
 
 ## Troubleshooting
 
-### La porta seriale non è visibile nel selettore
-- Assicurati che il cavo USB sia un cavo **dati** (non solo di ricarica).
-- Prova a cliccare **↻** per aggiornare la lista porte.
-- Su Windows: controlla in **Gestione dispositivi → Porte (COM e LPT)** se compare `Arduino Uno (COMx)`.
-- Installa i driver CH340/CH341 se usi un clone Nano con quel chip USB-seriale.
+### Serial port not visible in the dropdown
+- Make sure you are using a **data** USB cable, not a charge-only cable.
+- Click **↻** to refresh the port list.
+- On Windows: check **Device Manager → Ports (COM & LPT)** for `Arduino Uno (COMx)`.
+- If you use a Nano clone with a CH340/CH341 chip, install the matching USB-serial driver.
 
-### Errore di permessi su Linux (`Permission denied: /dev/ttyUSB0`)
-Aggiungi il tuo utente al gruppo `dialout` e riavvia la sessione:
+### Permission error on Linux (`Permission denied: /dev/ttyUSB0`)
+Add your user to the `dialout` group and log out/in:
 ```bash
 sudo usermod -aG dialout $USER
-# poi esegui logout/login oppure:
+# then log out and back in, or run:
 newgrp dialout
 ```
 
-### Arduino non risponde dopo la connessione
-- L'applicazione aspetta automaticamente 2 secondi per il reset — attendi che lo stato diventi `● Connesso`.
-- Se il problema persiste, premi il pulsante **RESET** fisico su Arduino con la porta già aperta.
-- Verifica che nessun altro programma (Arduino IDE Serial Monitor, ecc.) stia usando la stessa porta.
+### Arduino does not respond after connecting
+- The app automatically waits 2 seconds for the reset — wait until the status shows `● Connected`.
+- If the issue persists, press the physical **RESET** button on Arduino while the port is open.
+- Make sure no other program (Arduino IDE Serial Monitor, etc.) is using the same port.
 
-### Il LED non si accende
-- Controlla la polarità del LED (anodo sul pin 11, catodo verso GND via resistenza).
-- Verifica che la resistenza sia ~220 Ω (colori: rosso-rosso-marrone).
-- Testa con `PING` → se risponde `PONG` il firmware funziona, il problema è nel circuito.
+### LED does not light up
+- Check LED polarity: anode to pin 11, cathode to GND via resistor.
+- Verify the resistor is ~220 Ω (color bands: red-red-brown).
+- Send `PING` — if you get `PONG` back, the firmware is working and the issue is in the circuit.
