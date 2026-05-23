@@ -1,7 +1,7 @@
 # TestBoard PC Controller
 
 A minimal project to control the **TestBoard** — a custom board built around an ATmega328P running the Arduino bootloader — from a PC over serial.  
-A Python GUI (CustomTkinter) lets you toggle an LED on/off and send a digital pulse, with a live serial log.
+A Python GUI (CustomTkinter) lets you toggle an LED on/off and trigger a solenoid test pulse, with a live serial log.
 
 ---
 
@@ -11,9 +11,8 @@ A Python GUI (CustomTkinter) lets you toggle an LED on/off and send a digital pu
 |---|---|
 | TestBoard | ATmega328P + Arduino bootloader |
 | LED + 220 Ω resistor | Connected to pin 14 |
+| Solenoid | Connected to pin 13 (test output) |
 | USB cable | Data cable — used for both power and serial |
-
-> **Pin 13** drives the onboard LED — no external component needed for the pulse.
 
 ---
 
@@ -25,13 +24,13 @@ TestBoard            Breadboard
 Pin 14  ──────────►  LED anode (+)
 GND     ──────────►  LED cathode (–) via 220 Ω resistor
 
-Pin 13  (onboard LED — no external wiring required)
+Pin 13  ──────────►  Solenoid (test output, 500 ms pulse)
 ```
 
 | TestBoard Pin | Direction | Component |
 |---|---|---|
-| 11 | OUTPUT digital | External LED (anode via 220 Ω) |
-| 13 | OUTPUT digital | Onboard LED (500 ms pulse) |
+| 14 | OUTPUT digital | External LED (anode via 220 Ω) |
+| 13 | OUTPUT digital | Solenoid test (HIGH 500 ms, then LOW) |
 | GND | — | LED cathode / common ground |
 
 ---
@@ -79,7 +78,7 @@ python Software/controller.py
 3. Select the serial port from the **Port** dropdown (e.g. `COM3` on Windows, `/dev/ttyUSB0` on Linux).
 4. Click **Connect** — the app waits 2 seconds for the board auto-reset, then shows `● Connected`.
 5. Click **LED OFF / LED ON** to toggle the LED on pin 14.
-6. Click **500 ms Pulse** to drive pin 13 HIGH for half a second (onboard LED blinks).
+6. Click **Solenoid Test** to drive pin 13 HIGH for 500 ms (solenoid test pulse).
 7. All TX/RX messages appear in the serial log at the bottom with timestamps.
 8. Click **Disconnect** (or close the window) to release the serial port cleanly.
 
@@ -95,7 +94,7 @@ python Software/controller.py
 |---|---|
 | `LED:ON` | Turn LED on (pin 14 HIGH) |
 | `LED:OFF` | Turn LED off (pin 14 LOW) |
-| `PULSE` | Drive pin 13 HIGH for 500 ms, then LOW. Non-blocking. |
+| `SOLENOID` | Drive pin 13 HIGH for 500 ms, then LOW. Non-blocking solenoid test. |
 | `PING` | Check connection |
 
 ### Responses (TestBoard → PC)
@@ -106,7 +105,7 @@ python Software/controller.py
 | `PONG` | In reply to `PING` |
 | `OK:LED:ON` | Confirms LED turned on |
 | `OK:LED:OFF` | Confirms LED turned off |
-| `OK:PULSE` | Confirms pulse started |
+| `OK:SOLENOID` | Confirms solenoid pulse started |
 | `ERR:UNKNOWN:<cmd>` | Unrecognised command |
 
 ---

@@ -85,13 +85,13 @@ class App(ctk.CTk):
         )
         self._led_btn.pack(**pad)
 
-        # Pulse button
-        self._pulse_btn = ctk.CTkButton(
-            self, text="500 ms Pulse (pin 13)",
-            command=self._send_pulse,
+        # Solenoid test button
+        self._solenoid_btn = ctk.CTkButton(
+            self, text="Solenoid Test (pin 13)",
+            command=self._send_solenoid,
             state="disabled"
         )
-        self._pulse_btn.pack(**pad)
+        self._solenoid_btn.pack(**pad)
 
         ctk.CTkFrame(self, height=2, fg_color="#333").pack(fill="x", padx=12, pady=2)
 
@@ -151,7 +151,7 @@ class App(ctk.CTk):
         self._connect_btn.configure(text="Disconnect")
         self._status_label.configure(text="● Connected", text_color="#55e075")
         self._led_btn.configure(state="normal")
-        self._pulse_btn.configure(state="normal")
+        self._solenoid_btn.configure(state="normal")
         self._log_line("SYS", "Ready.")
         self._rx_thread = threading.Thread(target=self._rx_worker, daemon=True)
         self._rx_thread.start()
@@ -168,7 +168,7 @@ class App(ctk.CTk):
         self._connect_btn.configure(text="Connect")
         self._status_label.configure(text="● Disconnected", text_color="#e05555")
         self._led_btn.configure(text="LED  OFF", fg_color="#444", state="disabled")
-        self._pulse_btn.configure(state="disabled")
+        self._solenoid_btn.configure(state="disabled")
         self._log_line("SYS", "Disconnected.")
 
     # ------------------------------------------------------------------
@@ -222,8 +222,8 @@ class App(ctk.CTk):
             self._send("LED:OFF")
             self._led_btn.configure(text="LED  OFF", fg_color="#444", hover_color="#555")
 
-    def _send_pulse(self):
-        self._send("PULSE")
+    def _send_solenoid(self):
+        self._send("SOLENOID")
 
     # ------------------------------------------------------------------
     # Log console
