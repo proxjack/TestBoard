@@ -1,10 +1,10 @@
 // TestBoard PC Controller - Firmware
 // Target: TestBoard (ATmega328P with Arduino bootloader)
 //
-// Pin 11 — LED digital output (ON/OFF toggle)
+// Pin 14 — LED digital output (ON/OFF toggle)
 // Pin 13 — pulse output, HIGH for 500 ms then LOW
 
-#define PIN_LED    11
+#define PIN_LED    14
 #define PIN_PULSE  13
 #define BAUD_RATE  9600
 #define PULSE_MS   500

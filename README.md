@@ -10,7 +10,7 @@ A Python GUI (CustomTkinter) lets you toggle an LED on/off and send a digital pu
 | Component | Notes |
 |---|---|
 | TestBoard | ATmega328P + Arduino bootloader |
-| LED + 220 Ω resistor | Connected to pin 11 |
+| LED + 220 Ω resistor | Connected to pin 14 |
 | USB cable | Data cable — used for both power and serial |
 
 > **Pin 13** drives the onboard LED — no external component needed for the pulse.
@@ -22,7 +22,7 @@ A Python GUI (CustomTkinter) lets you toggle an LED on/off and send a digital pu
 ```
 TestBoard            Breadboard
 ─────────            ──────────
-Pin 11  ──────────►  LED anode (+)
+Pin 14  ──────────►  LED anode (+)
 GND     ──────────►  LED cathode (–) via 220 Ω resistor
 
 Pin 13  (onboard LED — no external wiring required)
@@ -78,7 +78,7 @@ python Software/controller.py
 2. Run `python Software/controller.py`.
 3. Select the serial port from the **Port** dropdown (e.g. `COM3` on Windows, `/dev/ttyUSB0` on Linux).
 4. Click **Connect** — the app waits 2 seconds for the board auto-reset, then shows `● Connected`.
-5. Click **LED OFF / LED ON** to toggle the LED on pin 11.
+5. Click **LED OFF / LED ON** to toggle the LED on pin 14.
 6. Click **500 ms Pulse** to drive pin 13 HIGH for half a second (onboard LED blinks).
 7. All TX/RX messages appear in the serial log at the bottom with timestamps.
 8. Click **Disconnect** (or close the window) to release the serial port cleanly.
@@ -93,8 +93,8 @@ python Software/controller.py
 
 | Command | Description |
 |---|---|
-| `LED:ON` | Turn LED on (pin 11 HIGH) |
-| `LED:OFF` | Turn LED off (pin 11 LOW) |
+| `LED:ON` | Turn LED on (pin 14 HIGH) |
+| `LED:OFF` | Turn LED off (pin 14 LOW) |
 | `PULSE` | Drive pin 13 HIGH for 500 ms, then LOW. Non-blocking. |
 | `PING` | Check connection |
 
@@ -147,6 +147,6 @@ newgrp dialout
 - Make sure no other program (Arduino IDE Serial Monitor, etc.) is using the same port.
 
 ### LED does not light up
-- Check LED polarity: anode to pin 11, cathode to GND via resistor.
+- Check LED polarity: anode to pin 14, cathode to GND via resistor.
 - Verify the resistor is ~220 Ω (color bands: red-red-brown).
 - Send `PING` — if you get `PONG` back, the firmware is working and the issue is in the circuit.
