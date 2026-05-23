@@ -1,22 +1,21 @@
-// Arduino PC Controller - Firmware
+// TestBoard PC Controller - Firmware
+// Target: TestBoard (ATmega328P with Arduino bootloader)
 //
-// NOTA PIN: Il pin 14 (A0) su Arduino Uno NON supporta PWM hardware.
-// I pin PWM hardware su Uno sono: 3, 5, 6, 9, 10, 11.
-// Viene usato il PIN 11 per il LED con PWM.
-// Il pin 13 è il LED onboard ed è usato per l'impulso.
+// Pin 11 — LED digital output (ON/OFF toggle)
+// Pin 13 — pulse output, HIGH for 500 ms then LOW
 
-#define PIN_LED_PWM  11   // PWM hardware OK
-#define PIN_PULSE    13   // output impulso 500 ms
-#define BAUD_RATE    9600
-#define PULSE_MS     500
+#define PIN_LED    11
+#define PIN_PULSE  13
+#define BAUD_RATE  9600
+#define PULSE_MS   500
 
-static bool     pulseActive   = false;
-static uint32_t pulseStart    = 0;
+static bool     pulseActive = false;
+static uint32_t pulseStart  = 0;
 
 void setup() {
-  pinMode(PIN_LED_PWM, OUTPUT);
-  pinMode(PIN_PULSE,   OUTPUT);
-  analogWrite(PIN_LED_PWM, 0);
+  pinMode(PIN_LED,   OUTPUT);
+  pinMode(PIN_PULSE, OUTPUT);
+  digitalWrite(PIN_LED,   LOW);
   digitalWrite(PIN_PULSE, LOW);
 
   Serial.begin(BAUD_RATE);
@@ -24,13 +23,12 @@ void setup() {
 }
 
 void loop() {
-  // --- gestione impulso non-bloccante ---
+  // Non-blocking pulse timing
   if (pulseActive && (millis() - pulseStart >= PULSE_MS)) {
     digitalWrite(PIN_PULSE, LOW);
     pulseActive = false;
   }
 
-  // --- lettura comando dalla seriale ---
   if (!Serial.available()) return;
 
   String cmd = Serial.readStringUntil('\n');
@@ -40,23 +38,19 @@ void loop() {
   if (cmd == F("PING")) {
     Serial.println(F("PONG"));
 
+  } else if (cmd == F("LED:ON")) {
+    digitalWrite(PIN_LED, HIGH);
+    Serial.println(F("OK:LED:ON"));
+
+  } else if (cmd == F("LED:OFF")) {
+    digitalWrite(PIN_LED, LOW);
+    Serial.println(F("OK:LED:OFF"));
+
   } else if (cmd == F("PULSE")) {
     digitalWrite(PIN_PULSE, HIGH);
     pulseActive = true;
     pulseStart  = millis();
     Serial.println(F("OK:PULSE"));
-
-  } else if (cmd.startsWith(F("PWM:"))) {
-    String valStr = cmd.substring(4);
-    long   val    = valStr.toInt();
-
-    // clamp 0-255
-    if (val < 0)   val = 0;
-    if (val > 255) val = 255;
-
-    analogWrite(PIN_LED_PWM, (uint8_t)val);
-    Serial.print(F("OK:PWM:"));
-    Serial.println(val);
 
   } else {
     Serial.print(F("ERR:UNKNOWN:"));
