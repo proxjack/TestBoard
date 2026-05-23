@@ -54,8 +54,8 @@ Requires Python 3.10 or later.
 
 ```bash
 # Clone the repo (or download the ZIP)
-git clone https://github.com/proxjack/test-board.git
-cd test-board
+git clone https://github.com/proxjack/TestBoard.git
+cd TestBoard
 
 # (Optional but recommended) virtual environment
 python -m venv .venv
