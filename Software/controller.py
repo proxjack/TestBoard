@@ -8,9 +8,15 @@ import queue
 import threading
 from datetime import datetime
 
+from pathlib import Path
+from PIL import Image
+import tkinter as tk
+
 import serial
 import serial.tools.list_ports
 import customtkinter as ctk
+
+_LOGO_PATH = Path(__file__).parent / "Amperry_Logo.png"
 
 BAUD_RATE     = 9600
 POLL_INTERVAL = 50   # ms — how often the main thread drains the RX queue
@@ -27,6 +33,10 @@ class App(ctk.CTk):
         self.title("TestBoard PC Controller")
         self.resizable(False, False)
 
+        if _LOGO_PATH.exists():
+            self._tk_icon = tk.PhotoImage(file=str(_LOGO_PATH))
+            self.iconphoto(True, self._tk_icon)
+
         self._serial: serial.Serial | None      = None
         self._rx_queue: queue.Queue[str]        = queue.Queue()
         self._rx_thread: threading.Thread | None = None
@@ -41,6 +51,15 @@ class App(ctk.CTk):
     # ------------------------------------------------------------------
     def _build_ui(self):
         pad = {"padx": 12, "pady": 6}
+
+        # Logo
+        if _LOGO_PATH.exists():
+            logo_img = ctk.CTkImage(
+                light_image=Image.open(_LOGO_PATH),
+                dark_image=Image.open(_LOGO_PATH),
+                size=(180, 50)
+            )
+            ctk.CTkLabel(self, image=logo_img, text="").pack(pady=(12, 4))
 
         # Port row
         row_port = ctk.CTkFrame(self, fg_color="transparent")
