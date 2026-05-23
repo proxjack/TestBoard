@@ -42,7 +42,7 @@ Pin 13  (onboard LED — no external wiring required)
 ### 1. Firmware — Arduino IDE
 
 1. Open **Arduino IDE** (1.x or 2.x).
-2. Go to **File → Open** and select `firmware.ino`.
+2. Go to **File → Open** and select `Software/firmware.ino`.
 3. Select the board: **Tools → Board → Arduino Uno** (or Nano).
 4. Select the port: **Tools → Port → COMx** (Windows) or `/dev/ttyUSBx` (Linux/Mac).
 5. Click **Upload** (→ arrow).
@@ -68,7 +68,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Launch the controller
-python controller.py
+python Software/controller.py
 ```
 
 ---
@@ -76,7 +76,7 @@ python controller.py
 ## Usage
 
 1. Plug Arduino into the PC via USB.
-2. Run `python controller.py`.
+2. Run `python Software/controller.py`.
 3. Select the serial port from the **Port** dropdown (e.g. `COM3` on Windows, `/dev/ttyUSB0` on Linux).
 4. Click **Connect** — the app waits 2 seconds for the Arduino auto-reset, then shows `● Connected`.
 5. Drag the **slider** (0–255) to adjust LED brightness on pin 11.
@@ -114,8 +114,9 @@ python controller.py
 
 ```
 test-board/
-├── firmware.ino       # Arduino sketch — non-blocking loop with millis()
-├── controller.py      # Python GUI — CustomTkinter + pyserial, RX thread
+├── Software/
+│   ├── firmware.ino   # Arduino sketch — non-blocking loop with millis()
+│   └── controller.py  # Python GUI — CustomTkinter + pyserial, RX thread
 ├── requirements.txt   # Python dependencies
 ├── .gitignore         # Standard Python ignores
 └── README.md          # This file
