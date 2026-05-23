@@ -16,7 +16,7 @@ import serial
 import serial.tools.list_ports
 import customtkinter as ctk
 
-_LOGO_PATH = Path(__file__).parent / "Amperry_Logo.png"
+_LOGO_PATH = Path(__file__).parent / "Amperry_Logo3.png"
 
 BAUD_RATE     = 9600
 POLL_INTERVAL = 50   # ms — how often the main thread drains the RX queue
