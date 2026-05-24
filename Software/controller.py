@@ -16,7 +16,7 @@ import serial
 import serial.tools.list_ports
 import customtkinter as ctk
 
-_LOGO_PATH = Path(__file__).parent / "Amperry_Logo3.png"
+_LOGO_PATH = Path(__file__).parent / "Logo" / "Amperry_Logo3.png"
 
 BAUD_RATE     = 9600
 POLL_INTERVAL = 50   # ms — how often the main thread drains the RX queue
@@ -52,14 +52,14 @@ class App(ctk.CTk):
     def _build_ui(self):
         pad = {"padx": 12, "pady": 6}
 
-        # Logo
+        # Logo — top-left, proportions preserved (source 256×248 → display 52×50)
         if _LOGO_PATH.exists():
             logo_img = ctk.CTkImage(
                 light_image=Image.open(_LOGO_PATH),
                 dark_image=Image.open(_LOGO_PATH),
-                size=(180, 50)
+                size=(52, 50)
             )
-            ctk.CTkLabel(self, image=logo_img, text="").pack(pady=(12, 4))
+            ctk.CTkLabel(self, image=logo_img, text="").pack(anchor="w", padx=12, pady=(10, 2))
 
         # Port row
         row_port = ctk.CTkFrame(self, fg_color="transparent")
