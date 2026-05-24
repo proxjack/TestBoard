@@ -110,6 +110,36 @@ python Software/controller.py
 
 ---
 
+## Custom Logo
+
+The application loads the company logo from `Software/Logo/Amperry_Logo3.png` at startup.  
+To replace it with your own logo, drop a new PNG file at that path and restart the app.
+
+**Recommendations for the logo file:**
+- Format: PNG with transparent background
+- Minimum size: 128×128 px (ensures crispness on HiDPI/Retina screens)
+- Aspect ratio: square or near-square works best; the app scales it proportionally to 64 px height
+- The transparent background blends with the dark UI (`#1a1a1a`) — avoid a white/solid fill
+
+If the file is missing, the app falls back to a green placeholder tile with the letter **"A"**.
+
+---
+
+## Color Palette
+
+| Role | Hex | Usage |
+|---|---|---|
+| Background | `#1a1a1a` | Main window |
+| Log background | `#141414` | Serial log area |
+| **Amperry green** | `#01F503` | Primary accent — buttons, status dot, LED active |
+| Hover | `#00C702` | Button hover state |
+| Text primary | `#ffffff` | Labels, titles |
+| Text secondary | `#888888` | Subtitles, inactive labels |
+| Log text | `#aaaaaa` | Serial message body |
+| Timestamp | `#666666` | Serial log timestamps |
+
+---
+
 ## Project Structure
 
 ```

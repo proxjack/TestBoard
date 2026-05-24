@@ -1,14 +1,14 @@
 """
 TestBoard PC Controller — GUI with CustomTkinter + pyserial
-Dependencies: pip install customtkinter pyserial
+Dependencies: pip install customtkinter pyserial pillow
 """
 
+import os
 import time
 import queue
 import threading
 from datetime import datetime
 
-from pathlib import Path
 from PIL import Image
 import tkinter as tk
 
@@ -16,114 +16,216 @@ import serial
 import serial.tools.list_ports
 import customtkinter as ctk
 
-_LOGO_PATH = Path(__file__).parent / "Logo" / "Amperry_Logo3.png"
+# ---------------------------------------------------------------------------
+# Paths & constants
+# ---------------------------------------------------------------------------
+_LOGO_PATH    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Logo", "Amperry_Logo3.png")
 
 BAUD_RATE     = 9600
-POLL_INTERVAL = 50   # ms — how often the main thread drains the RX queue
-RESET_DELAY   = 2.0  # seconds — wait for TestBoard auto-reset after port open
+POLL_INTERVAL = 50    # ms — how often the main thread drains the RX queue
+RESET_DELAY   = 2.0   # seconds — wait for board auto-reset after port open
+
+# ---------------------------------------------------------------------------
+# Palette
+# ---------------------------------------------------------------------------
+BG_MAIN   = "#1a1a1a"
+BG_LOG    = "#141414"
+ACCENT    = "#01F503"
+ACCENT_HV = "#00C702"
+TEXT_PRI  = "#ffffff"
+TEXT_SEC  = "#888888"
+TEXT_LOG  = "#aaaaaa"
+TEXT_TS   = "#666666"
+
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
-
-        self.title("TestBoard PC Controller")
+        self.title("Board Controller")
+        self.geometry("480x540")
         self.resizable(False, False)
+        self.configure(fg_color=BG_MAIN)
 
-        if _LOGO_PATH.exists():
-            self._tk_icon = tk.PhotoImage(file=str(_LOGO_PATH))
+        # Window icon
+        try:
+            self._tk_icon = tk.PhotoImage(file=_LOGO_PATH)
             self.iconphoto(True, self._tk_icon)
+        except Exception:
+            pass
 
-        self._serial: serial.Serial | None      = None
-        self._rx_queue: queue.Queue[str]        = queue.Queue()
-        self._rx_thread: threading.Thread | None = None
-        self._led_on: bool                      = False
+        # State
+        self._serial:    serial.Serial | None       = None
+        self._rx_queue:  queue.Queue[str]           = queue.Queue()
+        self._rx_thread: threading.Thread | None    = None
+        self._led_on:    bool                       = False
 
         self._build_ui()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._poll_rx()
 
     # ------------------------------------------------------------------
-    # UI
+    # UI construction
     # ------------------------------------------------------------------
     def _build_ui(self):
-        pad = {"padx": 12, "pady": 6}
+        P = 22  # outer horizontal padding
 
-        # Logo — top-left, proportions preserved (source 256×248 → display 52×50)
-        if _LOGO_PATH.exists():
-            logo_img = ctk.CTkImage(
-                light_image=Image.open(_LOGO_PATH),
-                dark_image=Image.open(_LOGO_PATH),
-                size=(52, 50)
+        # ── HEADER ──────────────────────────────────────────────────────
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.pack(fill="x", padx=P, pady=(20, 0))
+
+        # Logo
+        try:
+            pil_img  = Image.open(_LOGO_PATH)
+            tgt_h    = 64
+            tgt_w    = int(tgt_h * pil_img.width / pil_img.height)
+            logo_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(tgt_w, tgt_h))
+            logo_lbl = ctk.CTkLabel(header, image=logo_img, text="", fg_color="transparent")
+        except Exception:
+            logo_lbl = ctk.CTkLabel(
+                header, text="A", width=64, height=64,
+                fg_color=ACCENT, text_color="#000000",
+                font=ctk.CTkFont(family="Arial", size=32, weight="bold"),
+                corner_radius=8
             )
-            ctk.CTkLabel(self, image=logo_img, text="").pack(anchor="w", padx=12, pady=(10, 2))
+        logo_lbl.pack(side="left", anchor="center")
 
-        # Port row
-        row_port = ctk.CTkFrame(self, fg_color="transparent")
-        row_port.pack(fill="x", **pad)
+        title_block = ctk.CTkFrame(header, fg_color="transparent")
+        title_block.pack(side="left", padx=(14, 0), anchor="center")
 
-        ctk.CTkLabel(row_port, text="Port:").pack(side="left")
+        ctk.CTkLabel(
+            title_block, text="Board Controller",
+            font=ctk.CTkFont(family="Arial", size=20, weight="bold"),
+            text_color=TEXT_PRI
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            title_block, text="by Amperry",
+            font=ctk.CTkFont(family="Arial", size=11),
+            text_color=TEXT_SEC
+        ).pack(anchor="w")
+
+        # ── DIVIDER ─────────────────────────────────────────────────────
+        ctk.CTkFrame(self, height=1, fg_color="#2a2a2a").pack(fill="x", padx=P, pady=(18, 0))
+
+        # ── CONNECTION ──────────────────────────────────────────────────
+        conn_row = ctk.CTkFrame(self, fg_color="transparent")
+        conn_row.pack(fill="x", padx=P, pady=(16, 0))
 
         self._port_var = ctk.StringVar(value="")
         self._port_menu = ctk.CTkOptionMenu(
-            row_port, variable=self._port_var,
-            values=self._list_ports(), width=160
+            conn_row,
+            variable=self._port_var,
+            values=self._list_ports(),
+            width=150, height=34,
+            fg_color="#2a2a2a",
+            button_color="#333333",
+            button_hover_color="#3a3a3a",
+            text_color=TEXT_PRI,
+            font=ctk.CTkFont(family="Arial", size=12),
+            corner_radius=8,
+            dynamic_resizing=False,
         )
-        self._port_menu.pack(side="left", padx=(6, 0))
+        self._port_menu.pack(side="left")
 
         ctk.CTkButton(
-            row_port, text="↻", width=36,
+            conn_row, text="↻", width=34, height=34,
+            fg_color="#2a2a2a", hover_color="#3a3a3a",
+            text_color=TEXT_PRI,
+            font=ctk.CTkFont(family="Arial", size=14),
+            corner_radius=8,
             command=self._refresh_ports
-        ).pack(side="left", padx=(4, 0))
+        ).pack(side="left", padx=(6, 0))
 
         self._connect_btn = ctk.CTkButton(
-            row_port, text="Connect", width=110,
+            conn_row, text="Connect", width=110, height=34,
+            fg_color=ACCENT, hover_color=ACCENT_HV,
+            text_color="#000000",
+            font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
+            corner_radius=8,
             command=self._toggle_connection
         )
         self._connect_btn.pack(side="left", padx=(10, 0))
 
-        # Connection status
-        self._status_label = ctk.CTkLabel(
-            self, text="● Disconnected",
-            text_color="#e05555", font=ctk.CTkFont(size=13, weight="bold")
+        # Status row
+        status_row = ctk.CTkFrame(self, fg_color="transparent")
+        status_row.pack(fill="x", padx=P, pady=(10, 0))
+
+        self._status_dot = ctk.CTkLabel(
+            status_row, text="●", width=16,
+            font=ctk.CTkFont(family="Arial", size=13),
+            text_color="#555555"
         )
-        self._status_label.pack(**pad)
+        self._status_dot.pack(side="left")
 
-        ctk.CTkFrame(self, height=2, fg_color="#333").pack(fill="x", padx=12, pady=2)
+        self._status_label = ctk.CTkLabel(
+            status_row, text="Disconnected",
+            font=ctk.CTkFont(family="Arial", size=12),
+            text_color=TEXT_SEC
+        )
+        self._status_label.pack(side="left", padx=(4, 0))
 
-        # LED toggle button
+        # ── DIVIDER ─────────────────────────────────────────────────────
+        ctk.CTkFrame(self, height=1, fg_color="#2a2a2a").pack(fill="x", padx=P, pady=(16, 0))
+
+        # ── CONTROLS ────────────────────────────────────────────────────
+        ctrl_row = ctk.CTkFrame(self, fg_color="transparent")
+        ctrl_row.pack(fill="x", padx=P, pady=(16, 0))
+
+        # LED toggle — smaller
         self._led_btn = ctk.CTkButton(
-            self, text="LED  OFF",
-            width=200, height=40,
-            fg_color="#444", hover_color="#555",
+            ctrl_row, text="LED  OFF",
+            width=130, height=36,
+            fg_color="#2a2a2a", hover_color="#3a3a3a",
+            text_color=TEXT_SEC,
+            font=ctk.CTkFont(family="Arial", size=12),
+            corner_radius=8,
             command=self._toggle_led,
             state="disabled"
         )
-        self._led_btn.pack(**pad)
+        self._led_btn.pack(side="left")
 
-        # Solenoid test button
+        # Solenoid — larger, fills remaining space
         self._solenoid_btn = ctk.CTkButton(
-            self, text="Solenoid Test (pin 13)",
+            ctrl_row, text="Solenoid Test",
+            height=52,
+            fg_color=ACCENT, hover_color=ACCENT_HV,
+            text_color="#000000",
+            font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
+            corner_radius=8,
             command=self._send_solenoid,
             state="disabled"
         )
-        self._solenoid_btn.pack(**pad)
+        self._solenoid_btn.pack(side="left", padx=(12, 0), fill="x", expand=True)
 
-        ctk.CTkFrame(self, height=2, fg_color="#333").pack(fill="x", padx=12, pady=2)
+        # ── DIVIDER ─────────────────────────────────────────────────────
+        ctk.CTkFrame(self, height=1, fg_color="#2a2a2a").pack(fill="x", padx=P, pady=(18, 0))
 
-        # Serial log
-        ctk.CTkLabel(self, text="Serial log", font=ctk.CTkFont(size=12)).pack(
-            anchor="w", padx=12, pady=(6, 0)
-        )
+        # ── LOG FOOTER ──────────────────────────────────────────────────
+        ctk.CTkLabel(
+            self, text="Serial log",
+            font=ctk.CTkFont(family="Arial", size=10),
+            text_color=TEXT_SEC
+        ).pack(anchor="w", padx=P, pady=(10, 2))
+
         self._log = ctk.CTkTextbox(
-            self, width=460, height=180,
+            self,
             font=ctk.CTkFont(family="Courier New", size=11),
+            fg_color=BG_LOG,
+            text_color=TEXT_LOG,
+            corner_radius=8,
+            height=95,
+            border_width=0,
             state="disabled"
         )
-        self._log.pack(padx=12, pady=(2, 12))
+        self._log.pack(fill="x", padx=P, pady=(0, 20))
+
+        # Tags for timestamp vs message coloring
+        self._log._textbox.tag_configure("ts",  foreground=TEXT_TS)
+        self._log._textbox.tag_configure("txt", foreground=TEXT_LOG)
 
     # ------------------------------------------------------------------
     # Serial ports
@@ -155,8 +257,12 @@ class App(ctk.CTk):
             self._serial = serial.Serial(port, BAUD_RATE, timeout=0.1)
         except serial.SerialException as exc:
             self._log_line("ERR", str(exc))
+            self._status_dot.configure(text_color="#e05555")
+            self._status_label.configure(text="Error", text_color="#e05555")
             return
 
+        self._status_dot.configure(text_color="#f5a623")
+        self._status_label.configure(text="Connecting…", text_color="#f5a623")
         self._log_line("SYS", f"Port open: {port} — waiting for board reset…")
         threading.Thread(target=self._post_connect_init, daemon=True).start()
 
@@ -167,8 +273,13 @@ class App(ctk.CTk):
         self.after(0, self._on_connected)
 
     def _on_connected(self):
-        self._connect_btn.configure(text="Disconnect")
-        self._status_label.configure(text="● Connected", text_color="#55e075")
+        self._connect_btn.configure(
+            text="Disconnect",
+            fg_color="#2a2a2a", hover_color="#3a3a3a",
+            text_color=TEXT_PRI
+        )
+        self._status_dot.configure(text_color=ACCENT)
+        self._status_label.configure(text="Connected", text_color=ACCENT)
         self._led_btn.configure(state="normal")
         self._solenoid_btn.configure(state="normal")
         self._log_line("SYS", "Ready.")
@@ -184,9 +295,18 @@ class App(ctk.CTk):
             self._serial = None
 
         self._led_on = False
-        self._connect_btn.configure(text="Connect")
-        self._status_label.configure(text="● Disconnected", text_color="#e05555")
-        self._led_btn.configure(text="LED  OFF", fg_color="#444", state="disabled")
+        self._connect_btn.configure(
+            text="Connect",
+            fg_color=ACCENT, hover_color=ACCENT_HV,
+            text_color="#000000"
+        )
+        self._status_dot.configure(text_color="#555555")
+        self._status_label.configure(text="Disconnected", text_color=TEXT_SEC)
+        self._led_btn.configure(
+            text="LED  OFF",
+            fg_color="#2a2a2a", hover_color="#3a3a3a",
+            text_color=TEXT_SEC, state="disabled"
+        )
         self._solenoid_btn.configure(state="disabled")
         self._log_line("SYS", "Disconnected.")
 
@@ -236,24 +356,33 @@ class App(ctk.CTk):
         self._led_on = not self._led_on
         if self._led_on:
             self._send("LED:ON")
-            self._led_btn.configure(text="LED  ON", fg_color="#2a7a3b", hover_color="#358a47")
+            self._led_btn.configure(
+                text="LED  ON",
+                fg_color=ACCENT, hover_color=ACCENT_HV,
+                text_color="#000000"
+            )
         else:
             self._send("LED:OFF")
-            self._led_btn.configure(text="LED  OFF", fg_color="#444", hover_color="#555")
+            self._led_btn.configure(
+                text="LED  OFF",
+                fg_color="#2a2a2a", hover_color="#3a3a3a",
+                text_color=TEXT_SEC
+            )
 
     def _send_solenoid(self):
         self._send("SOLENOID")
 
     # ------------------------------------------------------------------
-    # Log console
+    # Log — colored timestamps via internal tk.Text tags
     # ------------------------------------------------------------------
     def _log_line(self, direction: str, text: str):
-        ts   = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        line = f"[{ts}] {direction:<3}  {text}\n"
-        self._log.configure(state="normal")
-        self._log.insert("end", line)
-        self._log.see("end")
-        self._log.configure(state="disabled")
+        ts = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        tb = self._log._textbox
+        tb.configure(state="normal")
+        tb.insert("end", f"[{ts}] {direction:<3}  ", "ts")
+        tb.insert("end", f"{text}\n",                "txt")
+        tb.see("end")
+        tb.configure(state="disabled")
 
     # ------------------------------------------------------------------
     # Window close
