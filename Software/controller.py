@@ -10,7 +10,7 @@ import queue
 import threading
 from datetime import datetime
 
-from PIL import Image
+from PIL import Image, ImageTk
 import tkinter as tk
 
 import serial
@@ -53,12 +53,7 @@ class App(ctk.CTk):
         self.resizable(False, False)
         self.configure(fg_color=BG_MAIN)
 
-        # Window icon
-        try:
-            self._tk_icon = tk.PhotoImage(file=_LOGO_PATH)
-            self.iconphoto(True, self._tk_icon)
-        except Exception:
-            pass
+        self._set_app_icon()
 
         # State
         self._serial:    serial.Serial | None       = None
@@ -69,6 +64,22 @@ class App(ctk.CTk):
         self._build_ui()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._poll_rx()
+
+    # ------------------------------------------------------------------
+    # App icon (title bar + taskbar)
+    # ------------------------------------------------------------------
+    def _set_app_icon(self):
+        ico_path = os.path.join(_BASE, "Logo", "Amperry_Logo3.ico")
+        png_path = _LOGO_PATH
+        try:
+            if sys.platform == "win32" and os.path.exists(ico_path):
+                self.iconbitmap(ico_path)
+            else:
+                icon_img        = Image.open(png_path)
+                self.icon_photo = ImageTk.PhotoImage(icon_img)
+                self.iconphoto(True, self.icon_photo)
+        except Exception as e:
+            print(f"Could not load app icon: {e}")
 
     # ------------------------------------------------------------------
     # UI construction

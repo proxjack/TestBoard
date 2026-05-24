@@ -123,6 +123,10 @@ To replace it with your own logo, drop a new PNG file at that path and restart t
 
 If the file is missing, the app falls back to a green placeholder tile with the letter **"A"**.
 
+The logo is used in two places:
+- **Header** — displayed inside the window at 64 px height, proportionally scaled
+- **Window icon** — shown in the title bar and taskbar/dock. On Windows the app uses `Logo/Amperry_Logo3.ico` (multi-size: 16–256 px) for native sharpness; on macOS/Linux it falls back to the PNG via `iconphoto()`.
+
 ---
 
 ## Color Palette
