@@ -4,6 +4,7 @@ Dependencies: pip install customtkinter pyserial pillow
 """
 
 import os
+import sys
 import time
 import queue
 import threading
@@ -19,7 +20,9 @@ import customtkinter as ctk
 # ---------------------------------------------------------------------------
 # Paths & constants
 # ---------------------------------------------------------------------------
-_LOGO_PATH    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Logo", "Amperry_Logo3.png")
+# Resolve base directory whether running from source or frozen (PyInstaller)
+_BASE      = sys._MEIPASS if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
+_LOGO_PATH = os.path.join(_BASE, "Logo", "Amperry_Logo3.png")
 
 BAUD_RATE     = 9600
 POLL_INTERVAL = 50    # ms — how often the main thread drains the RX queue

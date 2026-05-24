@@ -11,11 +11,14 @@ venv/
 env/
 ENV/
 
-# Distribuzione / packaging
+# Distribution / packaging
 dist/
 build/
 *.egg-info/
 *.egg
+
+# PyInstaller
+*.spec
 
 # Editor e IDE
 .vscode/
