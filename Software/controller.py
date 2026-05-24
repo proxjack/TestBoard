@@ -20,7 +20,6 @@ import customtkinter as ctk
 # ---------------------------------------------------------------------------
 # Paths & constants
 # ---------------------------------------------------------------------------
-# Resolve base directory whether running from source or frozen (PyInstaller)
 _BASE      = sys._MEIPASS if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
 _LOGO_PATH = os.path.join(_BASE, "Logo", "Amperry_Logo3.png")
 
@@ -29,16 +28,27 @@ POLL_INTERVAL = 50    # ms — how often the main thread drains the RX queue
 RESET_DELAY   = 2.0   # seconds — wait for board auto-reset after port open
 
 # ---------------------------------------------------------------------------
-# Palette
+# Design system — Amperry UI Audit 2026
 # ---------------------------------------------------------------------------
-BG_MAIN   = "#1a1a1a"
-BG_LOG    = "#141414"
-ACCENT    = "#01F503"
-ACCENT_HV = "#00C702"
-TEXT_PRI  = "#ffffff"
-TEXT_SEC  = "#888888"
-TEXT_LOG  = "#aaaaaa"
-TEXT_TS   = "#666666"
+CANVAS  = "#0A0B0A"
+SURFACE = "#141614"
+RAISED  = "#1E211E"
+BORDER  = "#2A2E2A"
+INPUTS  = "#0A0B0A"
+
+TEXT_PRI = "#F5F6F4"
+TEXT_MUT = "#A8B0AA"
+TEXT_DIS = "#6B7268"
+
+VOLT_500 = "#01F503"
+VOLT_600 = "#00C702"
+VOLT_800 = "#0E2A10"
+AMBER    = "#E5A53A"
+CORAL    = "#E5604A"
+
+# System sans-serif per platform; monospace for log output
+FONT_SANS = "Segoe UI" if sys.platform == "win32" else "Arial"
+FONT_MONO = "Consolas" if sys.platform == "win32" else "Menlo"
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -51,15 +61,15 @@ class App(ctk.CTk):
         self.title("TestBoard Controller")
         self.geometry("480x540")
         self.resizable(False, False)
-        self.configure(fg_color=BG_MAIN)
+        self.configure(fg_color=CANVAS)
 
         self._set_app_icon()
 
         # State
-        self._serial:    serial.Serial | None       = None
-        self._rx_queue:  queue.Queue[str]           = queue.Queue()
-        self._rx_thread: threading.Thread | None    = None
-        self._led_on:    bool                       = False
+        self._serial:    serial.Serial | None    = None
+        self._rx_queue:  queue.Queue[str]        = queue.Queue()
+        self._rx_thread: threading.Thread | None = None
+        self._led_on:    bool                    = False
 
         self._build_ui()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -85,13 +95,13 @@ class App(ctk.CTk):
     # UI construction
     # ------------------------------------------------------------------
     def _build_ui(self):
-        P = 22  # outer horizontal padding
+        PH = 20  # outer horizontal padding
+        PV = 14  # vertical gap between sections
 
-        # ── HEADER ──────────────────────────────────────────────────────
+        # ── HEADER (on canvas — no card) ─────────────────────────────────
         header = ctk.CTkFrame(self, fg_color="transparent")
-        header.pack(fill="x", padx=P, pady=(20, 0))
+        header.pack(fill="x", padx=PH, pady=(24, 0))
 
-        # Logo
         try:
             pil_img  = Image.open(_LOGO_PATH)
             tgt_h    = 64
@@ -101,8 +111,8 @@ class App(ctk.CTk):
         except Exception:
             logo_lbl = ctk.CTkLabel(
                 header, text="A", width=64, height=64,
-                fg_color=ACCENT, text_color="#000000",
-                font=ctk.CTkFont(family="Arial", size=32, weight="bold"),
+                fg_color=VOLT_500, text_color="#000000",
+                font=ctk.CTkFont(family=FONT_SANS, size=32, weight="bold"),
                 corner_radius=8
             )
         logo_lbl.pack(side="left", anchor="center")
@@ -112,22 +122,27 @@ class App(ctk.CTk):
 
         ctk.CTkLabel(
             title_block, text="TestBoard Controller",
-            font=ctk.CTkFont(family="Arial", size=20, weight="bold"),
+            font=ctk.CTkFont(family=FONT_SANS, size=20, weight="bold"),
             text_color=TEXT_PRI
         ).pack(anchor="w")
 
         ctk.CTkLabel(
             title_block, text="by Amperry",
-            font=ctk.CTkFont(family="Arial", size=11),
-            text_color=TEXT_SEC
+            font=ctk.CTkFont(family=FONT_SANS, size=11),
+            text_color=TEXT_MUT
         ).pack(anchor="w")
 
-        # ── DIVIDER ─────────────────────────────────────────────────────
-        ctk.CTkFrame(self, height=1, fg_color="#2a2a2a").pack(fill="x", padx=P, pady=(18, 0))
+        # ── CONNECTION CARD (Surface) ─────────────────────────────────────
+        conn_card = ctk.CTkFrame(
+            self,
+            fg_color=SURFACE,
+            border_color=BORDER, border_width=1,
+            corner_radius=10
+        )
+        conn_card.pack(fill="x", padx=PH, pady=(PV, 0))
 
-        # ── CONNECTION ──────────────────────────────────────────────────
-        conn_row = ctk.CTkFrame(self, fg_color="transparent")
-        conn_row.pack(fill="x", padx=P, pady=(16, 0))
+        conn_row = ctk.CTkFrame(conn_card, fg_color="transparent")
+        conn_row.pack(fill="x", padx=16, pady=(14, 0))
 
         self._port_var = ctk.StringVar(value="")
         self._port_menu = ctk.CTkOptionMenu(
@@ -135,110 +150,139 @@ class App(ctk.CTk):
             variable=self._port_var,
             values=self._list_ports(),
             width=150, height=34,
-            fg_color="#2a2a2a",
-            button_color="#333333",
-            button_hover_color="#3a3a3a",
+            fg_color=INPUTS,
+            button_color=RAISED,
+            button_hover_color=BORDER,
             text_color=TEXT_PRI,
-            font=ctk.CTkFont(family="Arial", size=12),
-            corner_radius=8,
+            font=ctk.CTkFont(family=FONT_SANS, size=12),
+            corner_radius=6,
             dynamic_resizing=False,
         )
         self._port_menu.pack(side="left")
 
+        # GHOST button — Refresh
         ctk.CTkButton(
-            conn_row, text="↻", width=34, height=34,
-            fg_color="#2a2a2a", hover_color="#3a3a3a",
-            text_color=TEXT_PRI,
-            font=ctk.CTkFont(family="Arial", size=14),
-            corner_radius=8,
+            conn_row, text="Refresh", width=68, height=34,
+            fg_color="transparent", hover_color=RAISED,
+            text_color=TEXT_MUT,
+            border_width=0,
+            font=ctk.CTkFont(family=FONT_SANS, size=12),
+            corner_radius=6,
             command=self._refresh_ports
         ).pack(side="left", padx=(6, 0))
 
+        # PRIMARY button — Connect
         self._connect_btn = ctk.CTkButton(
             conn_row, text="Connect", width=110, height=34,
-            fg_color=ACCENT, hover_color=ACCENT_HV,
+            fg_color=VOLT_500, hover_color=VOLT_600,
             text_color="#000000",
-            font=ctk.CTkFont(family="Arial", size=13, weight="bold"),
+            border_width=0,
+            font=ctk.CTkFont(family=FONT_SANS, size=13, weight="bold"),
             corner_radius=8,
             command=self._toggle_connection
         )
         self._connect_btn.pack(side="left", padx=(10, 0))
 
         # Status row
-        status_row = ctk.CTkFrame(self, fg_color="transparent")
-        status_row.pack(fill="x", padx=P, pady=(10, 0))
+        status_row = ctk.CTkFrame(conn_card, fg_color="transparent")
+        status_row.pack(fill="x", padx=16, pady=(8, 14))
 
         self._status_dot = ctk.CTkLabel(
-            status_row, text="●", width=16,
-            font=ctk.CTkFont(family="Arial", size=13),
-            text_color="#555555"
+            status_row, text="●", width=14,
+            font=ctk.CTkFont(family=FONT_SANS, size=10),
+            text_color=TEXT_DIS
         )
         self._status_dot.pack(side="left")
 
         self._status_label = ctk.CTkLabel(
             status_row, text="Disconnected",
-            font=ctk.CTkFont(family="Arial", size=12),
-            text_color=TEXT_SEC
+            font=ctk.CTkFont(family=FONT_SANS, size=12),
+            text_color=TEXT_MUT
         )
         self._status_label.pack(side="left", padx=(4, 0))
 
-        # ── DIVIDER ─────────────────────────────────────────────────────
-        ctk.CTkFrame(self, height=1, fg_color="#2a2a2a").pack(fill="x", padx=P, pady=(16, 0))
+        # ── CONTROLS CARD (Surface) ───────────────────────────────────────
+        ctrl_card = ctk.CTkFrame(
+            self,
+            fg_color=SURFACE,
+            border_color=BORDER, border_width=1,
+            corner_radius=10
+        )
+        ctrl_card.pack(fill="x", padx=PH, pady=(PV, 0))
 
-        # ── CONTROLS ────────────────────────────────────────────────────
-        ctrl_row = ctk.CTkFrame(self, fg_color="transparent")
-        ctrl_row.pack(fill="x", padx=P, pady=(16, 0))
+        ctrl_row = ctk.CTkFrame(ctrl_card, fg_color="transparent")
+        ctrl_row.pack(fill="x", padx=16, pady=(14, 14))
 
-        # LED toggle — smaller
+        # LED group: state dot + SECONDARY TONALE button
+        led_group = ctk.CTkFrame(ctrl_row, fg_color="transparent")
+        led_group.pack(side="left")
+
+        self._led_dot = ctk.CTkLabel(
+            led_group, text="●", width=14,
+            font=ctk.CTkFont(family=FONT_SANS, size=9),
+            text_color=TEXT_DIS
+        )
+        self._led_dot.pack(side="left", padx=(0, 4))
+
         self._led_btn = ctk.CTkButton(
-            ctrl_row, text="LED  OFF",
-            width=130, height=36,
-            fg_color="#2a2a2a", hover_color="#3a3a3a",
-            text_color=TEXT_SEC,
-            font=ctk.CTkFont(family="Arial", size=12),
+            led_group, text="LED",
+            width=120, height=36,
+            fg_color=RAISED, hover_color=BORDER,
+            text_color=TEXT_PRI,
+            border_color=BORDER, border_width=1,
+            font=ctk.CTkFont(family=FONT_SANS, size=13),
             corner_radius=8,
             command=self._toggle_led,
             state="disabled"
         )
         self._led_btn.pack(side="left")
 
-        # Solenoid — larger, fills remaining space
+        # PRIMARY button — Solenoid Test, fills remaining width
         self._solenoid_btn = ctk.CTkButton(
             ctrl_row, text="Solenoid Test",
             height=52,
-            fg_color=ACCENT, hover_color=ACCENT_HV,
+            fg_color=VOLT_500, hover_color=VOLT_600,
             text_color="#000000",
-            font=ctk.CTkFont(family="Arial", size=14, weight="bold"),
+            border_width=0,
+            font=ctk.CTkFont(family=FONT_SANS, size=14, weight="bold"),
             corner_radius=8,
             command=self._send_solenoid,
             state="disabled"
         )
         self._solenoid_btn.pack(side="left", padx=(12, 0), fill="x", expand=True)
 
-        # ── DIVIDER ─────────────────────────────────────────────────────
-        ctk.CTkFrame(self, height=1, fg_color="#2a2a2a").pack(fill="x", padx=P, pady=(18, 0))
-
-        # ── LOG FOOTER ──────────────────────────────────────────────────
-        ctk.CTkLabel(
-            self, text="Serial log",
-            font=ctk.CTkFont(family="Arial", size=10),
-            text_color=TEXT_SEC
-        ).pack(anchor="w", padx=P, pady=(10, 2))
-
-        self._log = ctk.CTkTextbox(
+        # ── LOG CARD (Surface, expands to bottom) ─────────────────────────
+        log_card = ctk.CTkFrame(
             self,
-            font=ctk.CTkFont(family="Courier New", size=11),
-            fg_color=BG_LOG,
-            text_color=TEXT_LOG,
-            corner_radius=8,
-            border_width=0,
+            fg_color=SURFACE,
+            border_color=BORDER, border_width=1,
+            corner_radius=10
+        )
+        log_card.pack(fill="both", expand=True, padx=PH, pady=(PV, 18))
+
+        # Eyebrow label — uppercase, muted, caption size
+        ctk.CTkLabel(
+            log_card, text="SERIAL LOG",
+            font=ctk.CTkFont(family=FONT_SANS, size=11),
+            text_color=TEXT_MUT
+        ).pack(anchor="w", padx=16, pady=(12, 4))
+
+        # Textbox — Inputs bg (#0A0B0A) recessed into canvas
+        self._log = ctk.CTkTextbox(
+            log_card,
+            font=ctk.CTkFont(family=FONT_MONO, size=11),
+            fg_color=INPUTS,
+            text_color=TEXT_MUT,
+            corner_radius=6,
+            border_width=1,
+            border_color=BORDER,
             state="disabled"
         )
-        self._log.pack(fill="both", expand=True, padx=P, pady=(0, 20))
+        self._log.pack(fill="both", expand=True, padx=16, pady=(0, 14))
 
         # Tags for timestamp vs message coloring
-        self._log._textbox.tag_configure("ts",  foreground=TEXT_TS)
-        self._log._textbox.tag_configure("txt", foreground=TEXT_LOG)
+        self._log._textbox.tag_configure("ts",  foreground=TEXT_DIS)
+        self._log._textbox.tag_configure("txt", foreground=TEXT_MUT)
 
     # ------------------------------------------------------------------
     # Serial ports
@@ -270,12 +314,12 @@ class App(ctk.CTk):
             self._serial = serial.Serial(port, BAUD_RATE, timeout=0.1)
         except serial.SerialException as exc:
             self._log_line("ERR", str(exc))
-            self._status_dot.configure(text_color="#e05555")
-            self._status_label.configure(text="Error", text_color="#e05555")
+            self._status_dot.configure(text_color=CORAL)
+            self._status_label.configure(text="Connection error", text_color=CORAL)
             return
 
-        self._status_dot.configure(text_color="#f5a623")
-        self._status_label.configure(text="Connecting…", text_color="#f5a623")
+        self._status_dot.configure(text_color=AMBER)
+        self._status_label.configure(text="Connecting…", text_color=AMBER)
         self._log_line("SYS", f"Port open: {port} — waiting for board reset…")
         threading.Thread(target=self._post_connect_init, daemon=True).start()
 
@@ -286,13 +330,15 @@ class App(ctk.CTk):
         self.after(0, self._on_connected)
 
     def _on_connected(self):
+        # Connect button → SECONDARY TONALE while connected
         self._connect_btn.configure(
             text="Disconnect",
-            fg_color="#2a2a2a", hover_color="#3a3a3a",
-            text_color=TEXT_PRI
+            fg_color=RAISED, hover_color=BORDER,
+            text_color=TEXT_PRI,
+            border_color=BORDER, border_width=1
         )
-        self._status_dot.configure(text_color=ACCENT)
-        self._status_label.configure(text="Connected", text_color=ACCENT)
+        self._status_dot.configure(text_color=VOLT_500)
+        self._status_label.configure(text="Live", text_color=TEXT_PRI)
         self._led_btn.configure(state="normal")
         self._solenoid_btn.configure(state="normal")
         self._log_line("SYS", "Ready.")
@@ -308,18 +354,22 @@ class App(ctk.CTk):
             self._serial = None
 
         self._led_on = False
+        # Connect button → PRIMARY
         self._connect_btn.configure(
             text="Connect",
-            fg_color=ACCENT, hover_color=ACCENT_HV,
-            text_color="#000000"
+            fg_color=VOLT_500, hover_color=VOLT_600,
+            text_color="#000000",
+            border_width=0
         )
-        self._status_dot.configure(text_color="#555555")
-        self._status_label.configure(text="Disconnected", text_color=TEXT_SEC)
+        self._status_dot.configure(text_color=TEXT_DIS)
+        self._status_label.configure(text="Disconnected", text_color=TEXT_MUT)
         self._led_btn.configure(
-            text="LED  OFF",
-            fg_color="#2a2a2a", hover_color="#3a3a3a",
-            text_color=TEXT_SEC, state="disabled"
+            text="LED",
+            fg_color=RAISED, hover_color=BORDER,
+            text_color=TEXT_PRI,
+            state="disabled"
         )
+        self._led_dot.configure(text_color=TEXT_DIS)
         self._solenoid_btn.configure(state="disabled")
         self._log_line("SYS", "Disconnected.")
 
@@ -369,18 +419,10 @@ class App(ctk.CTk):
         self._led_on = not self._led_on
         if self._led_on:
             self._send("LED:ON")
-            self._led_btn.configure(
-                text="LED  ON",
-                fg_color=ACCENT, hover_color=ACCENT_HV,
-                text_color="#000000"
-            )
+            self._led_dot.configure(text_color=VOLT_500)
         else:
             self._send("LED:OFF")
-            self._led_btn.configure(
-                text="LED  OFF",
-                fg_color="#2a2a2a", hover_color="#3a3a3a",
-                text_color=TEXT_SEC
-            )
+            self._led_dot.configure(text_color=TEXT_DIS)
 
     def _send_solenoid(self):
         self._send("SOLENOID")

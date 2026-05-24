@@ -131,16 +131,23 @@ The logo is used in two places:
 
 ## Color Palette
 
+> Aligned with the Amperry design system — UI Audit May 2026. Volt 500 green is reserved for primary actions and the "Live" status indicator.
+
 | Role | Hex | Usage |
 |---|---|---|
-| Background | `#1a1a1a` | Main window |
-| Log background | `#141414` | Serial log area |
-| **Amperry green** | `#01F503` | Primary accent — buttons, status dot, LED active |
-| Hover | `#00C702` | Button hover state |
-| Text primary | `#ffffff` | Labels, titles |
-| Text secondary | `#888888` | Subtitles, inactive labels |
-| Log text | `#aaaaaa` | Serial message body |
-| Timestamp | `#666666` | Serial log timestamps |
+| Canvas | `#0A0B0A` | Main window background |
+| Surface | `#141614` | Section cards (connection, controls, log) |
+| Raised | `#1E211E` | Elements inside cards (secondary buttons) |
+| Border | `#2A2E2A` | Card borders, input borders |
+| Inputs | `#0A0B0A` | Dropdowns, text log (recessed into canvas) |
+| Text primary | `#F5F6F4` | Labels, titles |
+| Text muted | `#A8B0AA` | Subtitles, inactive labels, log body |
+| Text disabled | `#6B7268` | Timestamps, disabled state |
+| **Volt 500** | `#01F503` | Primary action button, "Live" status dot |
+| Volt 600 | `#00C702` | Hover on primary button |
+| Volt 800 | `#0E2A10` | Tint backgrounds |
+| Amber | `#E5A53A` | "Connecting…" status |
+| Coral | `#E5604A` | "Connection error" status |
 
 ---
 
