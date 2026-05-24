@@ -48,7 +48,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Board Controller")
+        self.title("TestBoard Controller")
         self.geometry("480x540")
         self.resizable(False, False)
         self.configure(fg_color=BG_MAIN)
@@ -111,7 +111,7 @@ class App(ctk.CTk):
         title_block.pack(side="left", padx=(14, 0), anchor="center")
 
         ctk.CTkLabel(
-            title_block, text="Board Controller",
+            title_block, text="TestBoard Controller",
             font=ctk.CTkFont(family="Arial", size=20, weight="bold"),
             text_color=TEXT_PRI
         ).pack(anchor="w")
@@ -231,11 +231,10 @@ class App(ctk.CTk):
             fg_color=BG_LOG,
             text_color=TEXT_LOG,
             corner_radius=8,
-            height=95,
             border_width=0,
             state="disabled"
         )
-        self._log.pack(fill="x", padx=P, pady=(0, 20))
+        self._log.pack(fill="both", expand=True, padx=P, pady=(0, 20))
 
         # Tags for timestamp vs message coloring
         self._log._textbox.tag_configure("ts",  foreground=TEXT_TS)
