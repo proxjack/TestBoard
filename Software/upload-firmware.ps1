@@ -42,10 +42,14 @@ Write-Host ""
 
 # --- 1. verifica arduino-cli ---
 Write-Host "[1] Verifico arduino-cli..." -ForegroundColor Green
+# Aggiorna PATH dalla sessione di sistema (necessario nei terminali VSCode)
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
+            [System.Environment]::GetEnvironmentVariable("Path","User")
 $cli = Get-Command "arduino-cli" -ErrorAction SilentlyContinue
 if (-not $cli) {
     # cerca nei posti comuni
     $candidates = @(
+        "C:\Program Files\Arduino CLI\arduino-cli.exe",
         (Join-Path $env:LOCALAPPDATA "Programs\arduino-cli\arduino-cli.exe"),
         (Join-Path $env:ProgramFiles "arduino-cli\arduino-cli.exe"),
         "C:\arduino-cli\arduino-cli.exe"
