@@ -4,7 +4,7 @@
 // Pin 14 — LED digital output (ON/OFF toggle)
 // Pin 13 — solenoid test output, HIGH for 500 ms then LOW
 
-#define PIN_LED       14
+#define PIN_LED       10
 #define PIN_SOLENOID  13
 #define BAUD_RATE     9600
 #define SOLENOID_MS   500
