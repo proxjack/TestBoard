@@ -1,192 +1,238 @@
 # TestBoard PC Controller
 
-A minimal project to control the **TestBoard** — a custom board built around an ATmega328P running the Arduino bootloader — from a PC over serial.  
-A Python GUI (CustomTkinter) lets you toggle an LED on/off and trigger a solenoid test pulse, with a live serial log.
+Progetto per controllare la **TestBoard** — scheda custom basata su ATmega328 con bootloader **urboot** — tramite PC via seriale USB (CH340).  
+Un'app desktop Python (CustomTkinter) permette di controllare un LED, attivare un impulso solenoide e monitorare il log seriale in tempo reale.
 
 ---
 
-## Hardware Required
+## Struttura del progetto
 
-| Component | Notes |
+```
+TestBoard/
+├── Hardware/                    # Progetto Altium Designer (schema + PCB)
+├── Firmware/
+│   └── Firmware.ino             # Sketch Arduino per ATmega328
+├── Software/
+│   ├── assets/                  # Logo app (PNG, ICO, webp)
+│   ├── dist/
+│   │   └── TestBoardController.exe   # App compilata (standalone, no Python richiesto)
+│   ├── upload-firmware.ps1      # Script flash firmware via USB/CH340
+│   ├── flash-urboot.ps1         # Script flash bootloader urboot via ISP
+│   └── .vscode/
+│       └── tasks.json           # Task VSCode per compilare e flashare
+├── .gitignore
+└── README.md
+```
+
+---
+
+## Hardware
+
+| Componente | Note |
 |---|---|
-| TestBoard | ATmega328P + Arduino bootloader |
-| LED + 220 Ω resistor | Connected to pin 14 |
-| Solenoid | Connected to pin 13 (test output) |
-| USB cable | Data cable — used for both power and serial |
+| TestBoard | ATmega328 + bootloader urboot, CH340 integrato |
+| LED + resistore 220 Ω | Collegato al pin **10** |
+| Solenoide | Collegato al pin **13** (impulso test 500 ms) |
+| Cavo USB | Cavo dati — alimentazione + seriale via CH340 |
 
----
-
-## Wiring
+### Collegamento
 
 ```
 TestBoard            Breadboard
 ─────────            ──────────
-Pin 14  ──────────►  LED anode (+)
-GND     ──────────►  LED cathode (–) via 220 Ω resistor
+Pin 10  ──────────►  Anodo LED (+)
+GND     ──────────►  Catodo LED (–) via resistore 220 Ω
 
-Pin 13  ──────────►  Solenoid (test output, 500 ms pulse)
+Pin 13  ──────────►  Solenoide (impulso HIGH 500 ms, poi LOW)
 ```
 
-| TestBoard Pin | Direction | Component |
+| Pin TestBoard | Direzione | Componente |
 |---|---|---|
-| 14 | OUTPUT digital | External LED (anode via 220 Ω) |
-| 13 | OUTPUT digital | Solenoid test (HIGH 500 ms, then LOW) |
-| GND | — | LED cathode / common ground |
+| 10 | OUTPUT | LED esterno (anodo via 220 Ω) |
+| 13 | OUTPUT | Solenoide test (HIGH 500 ms, poi LOW) |
+| GND | — | Catodo LED / massa comune |
 
 ---
 
-## Installation
+## Prerequisiti
 
-### 1. Firmware — Arduino IDE
+### Driver CH340
+Su Windows il driver CH340 potrebbe non essere incluso automaticamente.  
+Se la scheda non compare in Device Manager → Porta COM: installa il driver CH340 dal sito del produttore.
 
-1. Open **Arduino IDE** (1.x or 2.x).
-2. Go to **File → Open** and select `Software/firmware.ino`.
-3. Select the board: **Tools → Board → Arduino Uno** (ATmega328P, same bootloader).
-4. Select the port: **Tools → Port → COMx** (Windows) or `/dev/ttyUSBx` (Linux/Mac).
-5. Click **Upload** (→ arrow).
-6. Open the **Serial Monitor** at 9600 baud and confirm `READY` appears on boot.
+### arduino-cli (solo per flashare il firmware)
 
-### 2. Python Software
+```powershell
+winget install ArduinoSA.CLI
+```
 
-Requires Python 3.10 or later.
+Poi riapri il terminale. Verifica con:
 
-```bash
-# Clone the repo (or download the ZIP)
-git clone https://github.com/proxjack/TestBoard.git
-cd TestBoard
+```powershell
+arduino-cli version
+```
 
-# (Optional but recommended) virtual environment
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# Linux/Mac:
-source .venv/bin/activate
+MiniCore (core per ATmega328 non-P) deve essere installato:
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Launch the controller
-python Software/controller.py
+```powershell
+arduino-cli core update-index --additional-urls https://mcudude.github.io/MiniCore/package_MCUdude_MiniCore_index.json
+arduino-cli core install MiniCore:avr --additional-urls https://mcudude.github.io/MiniCore/package_MCUdude_MiniCore_index.json
 ```
 
 ---
 
-## Usage
+## Flash firmware
 
-1. Plug the TestBoard into the PC via USB.
-2. Run `python Software/controller.py`.
-3. Select the serial port from the **Port** dropdown (e.g. `COM3` on Windows, `/dev/ttyUSB0` on Linux).
-4. Click **Connect** — the app waits 2 seconds for the board auto-reset, then shows `● Connected`.
-5. Click **LED OFF / LED ON** to toggle the LED on pin 14.
-6. Click **Solenoid Test** to drive pin 13 HIGH for 500 ms (solenoid test pulse).
-7. All TX/RX messages appear in the serial log at the bottom with timestamps.
-8. Click **Disconnect** (or close the window) to release the serial port cleanly.
+### Via VSCode (metodo consigliato)
 
----
+1. Apri la cartella `Software/` in VSCode.
+2. Collega la TestBoard via USB.
+3. `Ctrl+Shift+P` → **Tasks: Run Task** → **Firmware: Compila e carica (USB/CH340)**.
+4. Inserisci la porta COM quando richiesto (default: **COM5**).  
+   Per trovare la porta: Device Manager → Ports (COM & LPT) → cerca **USB-SERIAL CH340**.
 
-## Serial Protocol
+### Via PowerShell (manuale)
 
-**Settings:** 9600 baud, 8N1, newline `\n` terminator
+```powershell
+cd TestBoard\Software
+.\upload-firmware.ps1 -SerialPort COM5
+```
 
-### Commands (PC → TestBoard)
+Parametri opzionali:
 
-| Command | Description |
-|---|---|
-| `LED:ON` | Turn LED on (pin 14 HIGH) |
-| `LED:OFF` | Turn LED off (pin 14 LOW) |
-| `SOLENOID` | Drive pin 13 HIGH for 500 ms, then LOW. Non-blocking solenoid test. |
-| `PING` | Check connection |
-
-### Responses (TestBoard → PC)
-
-| Response | When sent |
-|---|---|
-| `READY` | On firmware boot |
-| `PONG` | In reply to `PING` |
-| `OK:LED:ON` | Confirms LED turned on |
-| `OK:LED:OFF` | Confirms LED turned off |
-| `OK:SOLENOID` | Confirms solenoid pulse started |
-| `ERR:UNKNOWN:<cmd>` | Unrecognised command |
-
----
-
-## Custom Logo
-
-The application loads the company logo from `Software/Logo/Amperry_Logo3.png` at startup.  
-To replace it with your own logo, drop a new PNG file at that path and restart the app.
-
-**Recommendations for the logo file:**
-- Format: PNG with transparent background
-- Minimum size: 128×128 px (ensures crispness on HiDPI/Retina screens)
-- Aspect ratio: square or near-square works best; the app scales it proportionally to 64 px height
-- The transparent background blends with the dark UI (`#1a1a1a`) — avoid a white/solid fill
-
-If the file is missing, the app falls back to a green placeholder tile with the letter **"A"**.
-
-The logo is used in two places:
-- **Header** — displayed inside the window at 64 px height, proportionally scaled
-- **Window icon** — shown in the title bar and taskbar/dock. On Windows the app uses `Logo/Amperry_Logo3.ico` (multi-size: 16–256 px) for native sharpness; on macOS/Linux it falls back to the PNG via `iconphoto()`.
-
----
-
-## Color Palette
-
-> Aligned with the Amperry design system — UI Audit May 2026. Volt 500 green is reserved for primary actions and the "Live" status indicator.
-
-| Role | Hex | Usage |
+| Parametro | Default | Descrizione |
 |---|---|---|
-| Canvas | `#0A0B0A` | Main window background |
-| Surface | `#141614` | Section cards (connection, controls, log) |
-| Raised | `#1E211E` | Elements inside cards (secondary buttons) |
-| Border | `#2A2E2A` | Card borders, input borders |
-| Inputs | `#0A0B0A` | Dropdowns, text log (recessed into canvas) |
-| Text primary | `#F5F6F4` | Labels, titles |
-| Text muted | `#A8B0AA` | Subtitles, inactive labels, log body |
-| Text disabled | `#6B7268` | Timestamps, disabled state |
-| **Volt 500** | `#01F503` | Primary action button, "Live" status dot |
-| Volt 600 | `#00C702` | Hover on primary button |
-| Volt 800 | `#0E2A10` | Tint backgrounds |
-| Amber | `#E5A53A` | "Connecting…" status |
-| Coral | `#E5604A` | "Connection error" status |
+| `-SerialPort` | `COM4` | Porta COM del CH340 |
+| `-SketchPath` | `../Firmware` | Cartella dello sketch |
+| `-CompileOnly` | — | Compila senza caricare |
+
+### Configurazione board (FQBN)
+
+```
+MiniCore:avr:328:variant=modelNonP,bootloader=uart0,clock=16MHz_external,BOD=2v7,eeprom=keep,LTO=Os_flto
+```
+
+| Opzione | Valore |
+|---|---|
+| Chip | ATmega328 (non-P, signature `1E 95 14`) |
+| Clock | 16 MHz esterno |
+| Bootloader | urboot UART0 |
+| BOD | 2.7 V |
+| EEPROM | preservata al flash |
+| LTO | abilitato (`Os_flto`) |
 
 ---
 
-## Project Structure
+## Flash bootloader urboot (solo se necessario)
+
+Operazione una-tantum, richiede un Arduino Uno usato come ISP.
+
+Via VSCode → **Tasks: Run Task**:
+
+| Task | Descrizione |
+|---|---|
+| Bootloader: Leggi signature + fuse | Read-only — verifica chip senza scrivere |
+| Bootloader: Scrivi SOLO i fuse | Scrive i fuse senza toccare il bootloader |
+| Bootloader: Flash completo (fuse + urboot) | Riscrive fuse + bootloader urboot |
+
+---
+
+## Avvio app
+
+Eseguire direttamente (nessuna installazione Python richiesta):
 
 ```
-TestBoard/
-├── Software/
-│   ├── firmware.ino   # TestBoard sketch — non-blocking loop with millis()
-│   └── controller.py  # Python GUI — CustomTkinter + pyserial, RX thread
-├── requirements.txt   # Python dependencies
-├── .gitignore         # Standard Python ignores
-└── README.md          # This file
+Software\dist\TestBoardController.exe
 ```
+
+### Utilizzo
+
+1. Collega la TestBoard via USB.
+2. Seleziona la porta COM dal menu a tendina (es. `COM5`).
+3. Clicca **Connect** — l'app attende il reset automatico (~2 s) e mostra `● Connected`.
+4. **LED OFF / LED ON** — toggle del LED sul pin 10.
+5. **Solenoid Test** — impulso HIGH 500 ms sul pin 13.
+6. Il log seriale mostra tutti i messaggi TX/RX con timestamp.
+7. **Disconnect** (o chiudi la finestra) per rilasciare la porta.
+
+---
+
+## Protocollo seriale
+
+**Impostazioni:** 9600 baud, 8N1, terminatore `\n`
+
+### Comandi (PC → TestBoard)
+
+| Comando | Descrizione |
+|---|---|
+| `LED:ON` | Accende il LED (pin 10 HIGH) |
+| `LED:OFF` | Spegne il LED (pin 10 LOW) |
+| `SOLENOID` | Impulso pin 13 HIGH per 500 ms, poi LOW |
+| `PING` | Verifica connessione |
+
+### Risposte (TestBoard → PC)
+
+| Risposta | Quando |
+|---|---|
+| `READY` | All'avvio del firmware |
+| `PONG` | In risposta a `PING` |
+| `OK:LED:ON` | Conferma LED acceso |
+| `OK:LED:OFF` | Conferma LED spento |
+| `OK:SOLENOID` | Conferma impulso solenoide avviato |
+| `ERR:UNKNOWN:<cmd>` | Comando non riconosciuto |
+
+---
+
+## Logo app
+
+Il logo viene caricato da `Software/assets/Amperry_Logo3.png` all'avvio.  
+Su Windows viene usato `Amperry_Logo3.ico` (multi-size 16–256 px) come icona finestra/taskbar.
+
+Per sostituire il logo: sovrascrivere i file in `Software/assets/` e ricompilare l'app.
+
+---
+
+## Palette colori (design system Amperry — UI Audit 2026)
+
+| Ruolo | Hex | Uso |
+|---|---|---|
+| Canvas | `#0A0B0A` | Sfondo finestra principale |
+| Surface | `#141614` | Card sezioni (connessione, controlli, log) |
+| Raised | `#1E211E` | Elementi interni alle card |
+| Border | `#2A2E2A` | Bordi card e input |
+| Text primary | `#F5F6F4` | Label, titoli |
+| Text muted | `#A8B0AA` | Sottotitoli, label inattive, log body |
+| Text disabled | `#6B7268` | Timestamp, stato disabilitato |
+| **Volt 500** | `#01F503` | Pulsante azione primaria, dot "Live" |
+| Volt 600 | `#00C702` | Hover pulsante primario |
+| Volt 800 | `#0E2A10` | Tint sfondi |
+| Amber | `#E5A53A` | Stato "Connecting…" |
+| Coral | `#E5604A` | Stato "Connection error" |
 
 ---
 
 ## Troubleshooting
 
-### Serial port not visible in the dropdown
-- Make sure you are using a **data** USB cable, not a charge-only cable.
-- Click **↻** to refresh the port list.
-- On Windows: check **Device Manager → Ports (COM & LPT)** for the TestBoard entry.
-- If the board uses a CH340/CH341 USB-serial chip, install the matching driver.
+### Porta COM non visibile nel dropdown
+- Verifica di usare un cavo USB **dati** (non solo carica).
+- Clicca **↻** per aggiornare la lista porte.
+- Device Manager → Ports (COM & LPT): la scheda appare come **USB-SERIAL CH340**.
+- Se non compare, installa il driver CH340.
 
-### Permission error on Linux (`Permission denied: /dev/ttyUSB0`)
-Add your user to the `dialout` group and log out/in:
-```bash
-sudo usermod -aG dialout $USER
-# then log out and back in, or run:
-newgrp dialout
-```
+### arduino-cli non trovato durante il flash
+- Chiudi e riapri il terminale dopo l'installazione.
+- Il task VSCode aggiorna il PATH automaticamente da registro di sistema.
 
-### Board does not respond after connecting
-- The app automatically waits 2 seconds for the reset — wait until the status shows `● Connected`.
-- If the issue persists, press the physical **RESET** button on the board while the port is open.
-- Make sure no other program (Arduino IDE Serial Monitor, etc.) is using the same port.
+### Errore compilazione — FQBN non valido
+- Verifica che MiniCore sia installato: `arduino-cli core list`.
+- Deve comparire `MiniCore:avr` nella lista.
 
-### LED does not light up
-- Check LED polarity: anode to pin 14, cathode to GND via resistor.
-- Verify the resistor is ~220 Ω (color bands: red-red-brown).
-- Send `PING` — if you get `PONG` back, the firmware is working and the issue is in the circuit.
+### La scheda non risponde dopo Connect
+- Attendi i 2 s per l'auto-reset — aspetta `● Connected`.
+- Premi il tasto fisico **RESET** sulla scheda con la porta aperta.
+- Verifica che nessun altro programma (Serial Monitor Arduino IDE, ecc.) stia usando la stessa porta.
+
+### Il LED non si accende
+- Verifica la polarità: anodo al pin **10**, catodo a GND via resistore.
+- Verifica il resistore ~220 Ω.
+- Invia `PING` — se ricevi `PONG` il firmware funziona, il problema è nel circuito.
