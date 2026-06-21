@@ -35,7 +35,7 @@ $ErrorActionPreference = "Stop"
 # --- FQBN completo con tutte le opzioni board ---
 # variant=modelNonP -> ATmega328 liscio (signature 1E 95 14)
 # clock=external_16MHz, bootloader=uart0 (urboot), BOD=2v7, eeprom=keep, LTO=Os_flto
-$FQBN = "MiniCore:avr:328:variant=modelNonP,bootloader=uart0,clock=external_16MHz,BOD=2v7,eeprom=keep,LTO=Os_flto,pinout=variant_pinout"
+$FQBN = "MiniCore:avr:328:variant=modelNonP,bootloader=uart0,clock=16MHz_external,BOD=2v7,eeprom=keep,LTO=Os_flto"
 
 Write-Host "=== Upload firmware via USB/CH340 (bootloader urboot) ===" -ForegroundColor Cyan
 Write-Host ""
