@@ -1,16 +1,17 @@
 // TestBoard PC Controller - Firmware
 // Target: TestBoard (ATmega328P with Arduino bootloader)
 //
-// Pin 14 — LED digital output (ON/OFF toggle)
-// Pin 13 — solenoid test output, HIGH for 500 ms then LOW
+// Pin 10 — LED digital output (ON/OFF toggle)
+// Pin 9 — solenoid test output, HIGH for <ms> then LOW
 
 #define PIN_LED       10
-#define PIN_SOLENOID  13
+#define PIN_SOLENOID  9
 #define BAUD_RATE     9600
-#define SOLENOID_MS   500
+#define SOLENOID_MS   5000
 
 static bool     solenoidActive = false;
 static uint32_t solenoidStart  = 0;
+static uint32_t solenoidDur    = SOLENOID_MS;
 
 void setup() {
   pinMode(PIN_LED,      OUTPUT);
@@ -24,7 +25,7 @@ void setup() {
 
 void loop() {
   // Non-blocking solenoid timing
-  if (solenoidActive && (millis() - solenoidStart >= SOLENOID_MS)) {
+  if (solenoidActive && (millis() - solenoidStart >= solenoidDur)) {
     digitalWrite(PIN_SOLENOID, LOW);
     solenoidActive = false;
   }
@@ -46,7 +47,20 @@ void loop() {
     digitalWrite(PIN_LED, LOW);
     Serial.println(F("OK:LED:OFF"));
 
+  } else if (cmd.startsWith(F("SOLENOID:"))) {
+    // SOLENOID:<ms>  — impulso con durata personalizzata
+    uint32_t ms = (uint32_t)cmd.substring(9).toInt();
+    if (ms == 0) ms = SOLENOID_MS;
+    solenoidDur    = ms;
+    digitalWrite(PIN_SOLENOID, HIGH);
+    solenoidActive = true;
+    solenoidStart  = millis();
+    Serial.print(F("OK:SOLENOID:"));
+    Serial.println(ms);
+
   } else if (cmd == F("SOLENOID")) {
+    // Compatibilità: usa durata di default
+    solenoidDur    = SOLENOID_MS;
     digitalWrite(PIN_SOLENOID, HIGH);
     solenoidActive = true;
     solenoidStart  = millis();

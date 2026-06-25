@@ -16,6 +16,7 @@ TestBoard/
 │   ├── assets/                  # Logo app (PNG, ICO, webp)
 │   ├── dist/
 │   │   └── TestBoardController.exe   # App compilata (standalone, no Python richiesto)
+│   ├── controller.py            # Sorgente Python dell'app (CustomTkinter)
 │   ├── upload-firmware.ps1      # Script flash firmware via USB/CH340
 │   ├── flash-urboot.ps1         # Script flash bootloader urboot via ISP
 │   └── .vscode/
@@ -32,7 +33,7 @@ TestBoard/
 |---|---|
 | TestBoard | ATmega328 + bootloader urboot, CH340 integrato |
 | LED + resistore 220 Ω | Collegato al pin **10** |
-| Solenoide | Collegato al pin **13** (impulso test 500 ms) |
+| Solenoide | Collegato al pin **9** (impulso test, durata configurabile) |
 | Cavo USB | Cavo dati — alimentazione + seriale via CH340 |
 
 ### Collegamento
@@ -43,13 +44,13 @@ TestBoard            Breadboard
 Pin 10  ──────────►  Anodo LED (+)
 GND     ──────────►  Catodo LED (–) via resistore 220 Ω
 
-Pin 13  ──────────►  Solenoide (impulso HIGH 500 ms, poi LOW)
+Pin 9   ──────────►  Solenoide (impulso HIGH <ms>, poi LOW)
 ```
 
 | Pin TestBoard | Direzione | Componente |
 |---|---|---|
 | 10 | OUTPUT | LED esterno (anodo via 220 Ω) |
-| 13 | OUTPUT | Solenoide test (HIGH 500 ms, poi LOW) |
+| 9  | OUTPUT | Solenoide test (HIGH per durata configurabile, poi LOW) |
 | GND | — | Catodo LED / massa comune |
 
 ---
@@ -151,8 +152,9 @@ Software\dist\TestBoardController.exe
 2. Seleziona la porta COM dal menu a tendina (es. `COM5`).
 3. Clicca **Connect** — l'app attende il reset automatico (~2 s) e mostra `● Connected`.
 4. **LED OFF / LED ON** — toggle del LED sul pin 10.
-5. **Solenoid Test** — impulso HIGH 500 ms sul pin 13.
-6. Il log seriale mostra tutti i messaggi TX/RX con timestamp.
+5. **Pulse duration (ms)** — imposta la durata dell'impulso solenoide in millisecondi (default: 5000). Il campo si abilita dopo la connessione.
+6. **Solenoid Test** — invia un impulso HIGH sul pin 9 per la durata impostata, poi LOW.
+7. Il log seriale mostra tutti i messaggi TX/RX con timestamp.
 7. **Disconnect** (o chiudi la finestra) per rilasciare la porta.
 
 ---
@@ -167,7 +169,8 @@ Software\dist\TestBoardController.exe
 |---|---|
 | `LED:ON` | Accende il LED (pin 10 HIGH) |
 | `LED:OFF` | Spegne il LED (pin 10 LOW) |
-| `SOLENOID` | Impulso pin 13 HIGH per 500 ms, poi LOW |
+| `SOLENOID:<ms>` | Impulso pin 9 HIGH per `<ms>` millisecondi, poi LOW (es. `SOLENOID:250`) |
+| `SOLENOID` | Impulso pin 9 HIGH per 5000 ms (default, retrocompatibile) |
 | `PING` | Verifica connessione |
 
 ### Risposte (TestBoard → PC)
@@ -178,7 +181,8 @@ Software\dist\TestBoardController.exe
 | `PONG` | In risposta a `PING` |
 | `OK:LED:ON` | Conferma LED acceso |
 | `OK:LED:OFF` | Conferma LED spento |
-| `OK:SOLENOID` | Conferma impulso solenoide avviato |
+| `OK:SOLENOID:<ms>` | Conferma impulso solenoide avviato con durata `<ms>` |
+| `OK:SOLENOID` | Conferma impulso solenoide avviato (comando senza parametro) |
 | `ERR:UNKNOWN:<cmd>` | Comando non riconosciuto |
 
 ---
@@ -189,6 +193,17 @@ Il logo viene caricato da `Software/assets/Amperry_Logo3.png` all'avvio.
 Su Windows viene usato `Amperry_Logo3.ico` (multi-size 16–256 px) come icona finestra/taskbar.
 
 Per sostituire il logo: sovrascrivere i file in `Software/assets/` e ricompilare l'app.
+
+## Ricompilare l'app
+
+Con Python 3 e PyInstaller installati:
+
+```powershell
+cd TestBoard\Software
+pyinstaller --onefile --windowed --name TestBoardController --icon "assets\Amperry_Logo3.ico" --add-data "assets;assets" controller.py
+```
+
+L'eseguibile viene generato in `Software/dist/TestBoardController.exe`.
 
 ---
 
