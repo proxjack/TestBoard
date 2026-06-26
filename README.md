@@ -1,7 +1,7 @@
 # TestBoard PC Controller
 
 Progetto per controllare la **TestBoard** — scheda custom basata su ATmega328 con bootloader **urboot** — tramite PC via seriale USB (CH340).  
-Un'app desktop Python (CustomTkinter) permette di controllare un LED, attivare un impulso solenoide e monitorare il log seriale in tempo reale.
+Un'app desktop Python (CustomTkinter) permette di attivare un impulso solenoide e monitorare il log seriale in tempo reale. Il LED si accende automaticamente per tutta la durata dell'impulso del solenoide (gestito dal firmware).
 
 ---
 
@@ -15,7 +15,7 @@ TestBoard/
 ├── Software/
 │   ├── assets/                  # Logo app (PNG, ICO, webp)
 │   ├── dist/
-│   │   └── TestBoardController.exe   # App compilata (standalone, no Python richiesto)
+│   │   └── TestBoard Controller.exe  # App compilata (standalone, no Python richiesto)
 │   ├── controller.py            # Sorgente Python dell'app (CustomTkinter)
 │   ├── upload-firmware.ps1      # Script flash firmware via USB/CH340
 │   ├── flash-urboot.ps1         # Script flash bootloader urboot via ISP
@@ -32,7 +32,7 @@ TestBoard/
 | Componente | Note |
 |---|---|
 | TestBoard | ATmega328 + bootloader urboot, CH340 integrato |
-| LED + resistore 220 Ω | Collegato al pin **10** |
+| LED + resistore 220 Ω | Collegato al pin **10** — si accende durante l'impulso solenoide |
 | Solenoide | Collegato al pin **9** (impulso test, durata configurabile) |
 | Cavo USB | Cavo dati — alimentazione + seriale via CH340 |
 
@@ -49,7 +49,7 @@ Pin 9   ──────────►  Solenoide (impulso HIGH <ms>, poi LOW
 
 | Pin TestBoard | Direzione | Componente |
 |---|---|---|
-| 10 | OUTPUT | LED esterno (anodo via 220 Ω) |
+| 10 | OUTPUT | LED esterno (anodo via 220 Ω) — HIGH durante impulso solenoide, LOW altrimenti |
 | 9  | OUTPUT | Solenoide test (HIGH per durata configurabile, poi LOW) |
 | GND | — | Catodo LED / massa comune |
 
@@ -143,7 +143,7 @@ Via VSCode → **Tasks: Run Task**:
 Eseguire direttamente (nessuna installazione Python richiesta):
 
 ```
-Software\dist\TestBoardController.exe
+Software\dist\TestBoard Controller.exe
 ```
 
 ### Utilizzo
@@ -151,10 +151,9 @@ Software\dist\TestBoardController.exe
 1. Collega la TestBoard via USB.
 2. Seleziona la porta COM dal menu a tendina (es. `COM5`).
 3. Clicca **Connect** — l'app attende il reset automatico (~2 s) e mostra `● Connected`.
-4. **LED OFF / LED ON** — toggle del LED sul pin 10.
-5. **Pulse duration (ms)** — imposta la durata dell'impulso solenoide in millisecondi (default: 5000). Il campo si abilita dopo la connessione.
-6. **Solenoid Test** — invia un impulso HIGH sul pin 9 per la durata impostata, poi LOW.
-7. Il log seriale mostra tutti i messaggi TX/RX con timestamp.
+4. **Pulse duration (ms)** — imposta la durata dell'impulso solenoide in millisecondi (default: 5000). Il campo si abilita dopo la connessione.
+5. **Solenoid Test** — invia un impulso HIGH sul pin 9 per la durata impostata, poi LOW. Il LED (pin 10) si accende automaticamente per tutta la durata dell'impulso.
+6. Il log seriale mostra tutti i messaggi TX/RX con timestamp.
 7. **Disconnect** (o chiudi la finestra) per rilasciare la porta.
 
 ---
@@ -167,10 +166,8 @@ Software\dist\TestBoardController.exe
 
 | Comando | Descrizione |
 |---|---|
-| `LED:ON` | Accende il LED (pin 10 HIGH) |
-| `LED:OFF` | Spegne il LED (pin 10 LOW) |
-| `SOLENOID:<ms>` | Impulso pin 9 HIGH per `<ms>` millisecondi, poi LOW (es. `SOLENOID:250`) |
-| `SOLENOID` | Impulso pin 9 HIGH per 5000 ms (default, retrocompatibile) |
+| `SOLENOID:<ms>` | Impulso pin 9 HIGH per `<ms>` ms + LED ON, poi entrambi LOW (es. `SOLENOID:250`) |
+| `SOLENOID` | Impulso pin 9 HIGH per 500 ms (default, retrocompatibile) |
 | `PING` | Verifica connessione |
 
 ### Risposte (TestBoard → PC)
@@ -179,8 +176,6 @@ Software\dist\TestBoardController.exe
 |---|---|
 | `READY` | All'avvio del firmware |
 | `PONG` | In risposta a `PING` |
-| `OK:LED:ON` | Conferma LED acceso |
-| `OK:LED:OFF` | Conferma LED spento |
 | `OK:SOLENOID:<ms>` | Conferma impulso solenoide avviato con durata `<ms>` |
 | `OK:SOLENOID` | Conferma impulso solenoide avviato (comando senza parametro) |
 | `ERR:UNKNOWN:<cmd>` | Comando non riconosciuto |
@@ -200,10 +195,10 @@ Con Python 3 e PyInstaller installati:
 
 ```powershell
 cd TestBoard\Software
-pyinstaller --onefile --windowed --name TestBoardController --icon "assets\Amperry_Logo3.ico" --add-data "assets;assets" controller.py
+pyinstaller --onefile --windowed --name "TestBoard Controller" --icon "assets\Amperry_Logo3.ico" --add-data "assets;assets" controller.py
 ```
 
-L'eseguibile viene generato in `Software/dist/TestBoardController.exe`.
+L'eseguibile viene generato in `Software/dist/TestBoard Controller.exe`.
 
 ---
 
@@ -247,7 +242,8 @@ L'eseguibile viene generato in `Software/dist/TestBoardController.exe`.
 - Premi il tasto fisico **RESET** sulla scheda con la porta aperta.
 - Verifica che nessun altro programma (Serial Monitor Arduino IDE, ecc.) stia usando la stessa porta.
 
-### Il LED non si accende
+### Il LED non si accende durante il test solenoide
+- Il LED si accende solo mentre l'impulso solenoide è attivo — premi **Solenoid Test** e verifica.
 - Verifica la polarità: anodo al pin **10**, catodo a GND via resistore.
 - Verifica il resistore ~220 Ω.
 - Invia `PING` — se ricevi `PONG` il firmware funziona, il problema è nel circuito.

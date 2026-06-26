@@ -7,7 +7,7 @@
 #define PIN_LED       10
 #define PIN_SOLENOID  9
 #define BAUD_RATE     9600
-#define SOLENOID_MS   5000
+#define SOLENOID_MS   500
 
 static bool     solenoidActive = false;
 static uint32_t solenoidStart  = 0;
@@ -27,6 +27,7 @@ void loop() {
   // Non-blocking solenoid timing
   if (solenoidActive && (millis() - solenoidStart >= solenoidDur)) {
     digitalWrite(PIN_SOLENOID, LOW);
+    digitalWrite(PIN_LED,      LOW);
     solenoidActive = false;
   }
 
@@ -53,6 +54,7 @@ void loop() {
     if (ms == 0) ms = SOLENOID_MS;
     solenoidDur    = ms;
     digitalWrite(PIN_SOLENOID, HIGH);
+    digitalWrite(PIN_LED,      HIGH);
     solenoidActive = true;
     solenoidStart  = millis();
     Serial.print(F("OK:SOLENOID:"));
@@ -62,6 +64,7 @@ void loop() {
     // Compatibilità: usa durata di default
     solenoidDur    = SOLENOID_MS;
     digitalWrite(PIN_SOLENOID, HIGH);
+    digitalWrite(PIN_LED,      HIGH);
     solenoidActive = true;
     solenoidStart  = millis();
     Serial.println(F("OK:SOLENOID"));

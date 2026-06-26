@@ -69,7 +69,6 @@ class App(ctk.CTk):
         self._serial:    serial.Serial | None    = None
         self._rx_queue:  queue.Queue[str]        = queue.Queue()
         self._rx_thread: threading.Thread | None = None
-        self._led_on:    bool                    = False
 
         self._build_ui()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -213,29 +212,13 @@ class App(ctk.CTk):
         ctrl_row = ctk.CTkFrame(ctrl_card, fg_color="transparent")
         ctrl_row.pack(fill="x", padx=16, pady=(14, 14))
 
-        # LED group: state dot + SECONDARY TONALE button
-        led_group = ctk.CTkFrame(ctrl_row, fg_color="transparent")
-        led_group.pack(side="left")
-
+        # Solenoid active indicator dot
         self._led_dot = ctk.CTkLabel(
-            led_group, text="●", width=14,
+            ctrl_row, text="●", width=14,
             font=ctk.CTkFont(family=FONT_SANS, size=9),
             text_color=TEXT_DIS
         )
         self._led_dot.pack(side="left", padx=(0, 4))
-
-        self._led_btn = ctk.CTkButton(
-            led_group, text="LED",
-            width=120, height=36,
-            fg_color=RAISED, hover_color=BORDER,
-            text_color=TEXT_PRI,
-            border_color=BORDER, border_width=1,
-            font=ctk.CTkFont(family=FONT_SANS, size=13),
-            corner_radius=8,
-            command=self._toggle_led,
-            state="disabled"
-        )
-        self._led_btn.pack(side="left")
 
         # PRIMARY button — Solenoid Test, fills remaining width
         self._solenoid_btn = ctk.CTkButton(
@@ -363,7 +346,6 @@ class App(ctk.CTk):
         )
         self._status_dot.configure(text_color=VOLT_500)
         self._status_label.configure(text="Live", text_color=TEXT_PRI)
-        self._led_btn.configure(state="normal")
         self._solenoid_btn.configure(state="normal")
         self._ms_entry.configure(state="normal")
         self._log_line("SYS", "Ready.")
@@ -378,7 +360,6 @@ class App(ctk.CTk):
                 pass
             self._serial = None
 
-        self._led_on = False
         # Connect button → PRIMARY
         self._connect_btn.configure(
             text="Connect",
@@ -388,12 +369,6 @@ class App(ctk.CTk):
         )
         self._status_dot.configure(text_color=TEXT_DIS)
         self._status_label.configure(text="Disconnected", text_color=TEXT_MUT)
-        self._led_btn.configure(
-            text="LED",
-            fg_color=RAISED, hover_color=BORDER,
-            text_color=TEXT_PRI,
-            state="disabled"
-        )
         self._led_dot.configure(text_color=TEXT_DIS)
         self._solenoid_btn.configure(state="disabled")
         self._ms_entry.configure(state="disabled")
@@ -441,21 +416,14 @@ class App(ctk.CTk):
             self._log_line("ERR", str(exc))
             self._disconnect()
 
-    def _toggle_led(self):
-        self._led_on = not self._led_on
-        if self._led_on:
-            self._send("LED:ON")
-            self._led_dot.configure(text_color=VOLT_500)
-        else:
-            self._send("LED:OFF")
-            self._led_dot.configure(text_color=TEXT_DIS)
-
     def _send_solenoid(self):
         try:
             ms = max(1, int(self._ms_var.get()))
         except ValueError:
             ms = 5000
         self._send(f"SOLENOID:{ms}")
+        self._led_dot.configure(text_color=VOLT_500)
+        self.after(ms, lambda: self._led_dot.configure(text_color=TEXT_DIS))
 
     # ------------------------------------------------------------------
     # Log — colored timestamps via internal tk.Text tags
